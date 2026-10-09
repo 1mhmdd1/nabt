@@ -31,7 +31,8 @@ const WORD_IN = 0; //      THRIVE alone, centred
 const MORPH = 650; //      the word settles down while the lotus blooms above it
 const BAR_START = 1500; // the flower bar fills, flower by flower
 const BAR_MS = 1250;
-const LEAVE = 3000;
+/** Leave only after the last flower has lit (bar end + its 380 ms pop), plus a short hold. */
+const LEAVE = BAR_START + BAR_MS + 380 + 450;
 const CALM_LEAVE = 900;
 
 const native = Platform.OS !== "web";
@@ -130,7 +131,18 @@ export default function Launch() {
       );
     }
     const main = Animated.parallel(anims);
-    main.start();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let left = false;
+    const go = () => {
+      if (left) return;
+      left = true;
+      leave();
+    };
+    // Route once the whole sequence has played. The timer is only a fallback if a callback never comes.
+    main.start(({ finished }) => {
+      if (finished && !hold) timer = setTimeout(go, calm ? 300 : 450);
+    });
+    const fallback = hold ? null : setTimeout(go, (calm ? CALM_LEAVE : LEAVE) + 1200);
 
     // Sparkles keep twinkling for as long as the loader is on screen.
     const loops = twinkle.map((v, i) =>
@@ -144,12 +156,12 @@ export default function Launch() {
     );
     loops.forEach((l) => l.start());
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    if (!hold) timer = setTimeout(leave, calm ? CALM_LEAVE : LEAVE);
     return () => {
+      left = true;
       main.stop();
       loops.forEach((l) => l.stop());
       if (timer) clearTimeout(timer);
+      if (fallback) clearTimeout(fallback);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calm, hold, word, wordDrop, petals, flame, bar, flowers, twinkle, glint]);
