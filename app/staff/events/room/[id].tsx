@@ -1,16 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { getFirebase } from "../../../../src/firebase";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { SvgXml } from "react-native-svg";
 import { GoldButton, StaffFrame } from "../../../../src/components/staff/StaffChrome";
 import { hallPlanSvg } from "../../../../src/art/hallPlanSvg";
 import { C, t } from "../../../../src/theme";
-import { useStaff } from "../../../../src/live/staff";
+import { bookSpace, useStaff } from "../../../../src/live/staff";
 
 export default function Room() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const space = useStaff((s) => s.spaces.find((x) => x.id === id) || s.spaces.find((x) => x.id === "hall-b"));
   const [booked, setBooked] = useState(false);
+  const roomId = space?.id || String(id || "");
+  useEffect(() => {
+    if (!roomId) return;
+    return onSnapshot(doc(getFirebase().db, "staffBookings", `${roomId}-1300`), (snap) => setBooked(snap.exists()));
+  }, [roomId]);
   if (!space) {
     return (
       <StaffFrame title="Hall" back="/staff/events/spaces">
@@ -42,7 +49,10 @@ export default function Room() {
           </View>
         ))}
         <View style={{ marginTop: 12 }}>
-          <GoldButton label={booked ? "Booked 1:00–2:00 PM" : "Book 1:00–2:00 PM"} onPress={() => setBooked(true)} />
+          <GoldButton label={booked ? "Booked 1:00–2:00 PM" : "Book 1:00–2:00 PM"} onPress={() => {
+              if (!booked) void bookSpace(roomId, "1300");
+            }}
+          />
         </View>
         <Text style={styles.ph}>{space.name} is on today’s campus list.</Text>
       </ScrollView>

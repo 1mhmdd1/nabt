@@ -7,7 +7,7 @@ import { IconBack, IconCheck, IconChevronDown, IconClock, IconMore, IconRootGold
 import { C, t } from "../../../src/theme";
 import { useNabt } from "../../../src/state";
 import { OutgoingHalt } from "../../../src/moderation/outgoing";
-import { me, postPromptAnswer, postThreadReply, thankReply, useCampus, type Member } from "../../../src/live";
+import { me, postPromptAnswer, postThreadReply, proposeMeetup, thankReply, useCampus, type Member } from "../../../src/live";
 import { writeSafetySignal } from "../../../src/live/voiceSafety";
 import { joinCommunity, leaveCommunity } from "../../../src/live/communities";
 
@@ -17,10 +17,11 @@ export default function CircleSpace() {
   const [line, setLine] = useState("");
   const [reply, setReply] = useState("");
   const [kind, setKind] = useState("Quiet sit");
-  const [proposed, setProposed] = useState(false);
+  const [sending, setSending] = useState(false);
   const setCaution = useNabt((s) => s.setCaution);
   const caution = useNabt((s) => s.caution);
   const campus = useCampus();
+  const proposed = Boolean(campus.meetup?.proposedBy) && campus.meetup?.proposedBy === me();
   const circle = campus.circles[String(id)] || campus.circles["exam-week"];
   const members = campus.members[String(id)] || campus.members["exam-week"] || [];
   const title = circle?.name || "";
@@ -163,7 +164,15 @@ export default function CircleSpace() {
             <IconShield size={16} color={C.w64} />
             <Text style={styles.muted}>{campus.meetup?.note}</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => setProposed(true)} style={styles.propose}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={proposed || sending}
+            onPress={() => {
+              setSending(true);
+              void proposeMeetup(String(id), kind).finally(() => setSending(false));
+            }}
+            style={styles.propose}
+          >
             <Text style={[t(700, 15, 15), { color: C.burgundy, letterSpacing: 0.15 }]}>{proposed ? "Sent to Student Affairs" : "Propose meetup"}</Text>
           </Pressable>
           <View style={styles.approvedRow}>

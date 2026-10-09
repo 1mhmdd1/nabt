@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { doc, getDoc } from "firebase/firestore";
 import { router, useLocalSearchParams } from "expo-router";
 import { getFirebase } from "../../../src/firebase";
@@ -132,7 +132,22 @@ function CommunityEvent({ id }: { id: string }) {
         </View>
         <Text style={[t(700, 26, 32), { marginTop: 14 }]}>{event?.title || "Campus event"}</Text>
         <View style={eventStyles.list}>
-          <Pressable accessibilityRole="button" onPress={() => setAdded(true)} style={[eventStyles.row, { borderTopWidth: 0 }]}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              // Opens the phone's calendar (Google Calendar) with the event filled in.
+              const q = new URLSearchParams({
+                action: "TEMPLATE",
+                text: event?.title || "Campus event",
+                details: `${event?.whenLine || event?.meta || ""} · NABT`,
+                location: event?.placeLine || "Antonine University",
+              });
+              void Linking.openURL(`https://calendar.google.com/calendar/render?${q.toString()}`)
+                .then(() => setAdded(true))
+                .catch(() => setAdded(false));
+            }}
+            style={[eventStyles.row, { borderTopWidth: 0 }]}
+          >
             <View style={{ flex: 1 }}>
               <Text style={t(600, 14, 18)}>{event?.whenLine || event?.meta}</Text>
               <Text style={eventStyles.sub}>{added ? "Added to your calendar" : "Add to calendar"}</Text>

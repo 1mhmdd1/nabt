@@ -79,6 +79,7 @@ export type Meetup = {
   selected: string;
   note: string;
   approvedLine: string;
+  proposedBy: string;
 };
 export type CircleDoc = {
   id: string;
@@ -789,6 +790,7 @@ function watchCircleContent(db: ReturnType<typeof getFirebase>["db"], id: string
             selected: String(data.selected || ""),
             note: String(data.note || ""),
             approvedLine: String(data.approvedLine || ""),
+            proposedBy: String(data.proposedBy || ""),
           }
         : null,
     });
@@ -834,6 +836,25 @@ export async function sendCircleMessage(circleId: string, text: string, extra?: 
   if (extra?.replyTo) payload.replyTo = extra.replyTo;
   const ref = await addDoc(collection(db, "circles", circleId, "messages"), payload);
   return ref.id;
+}
+
+/** Ask Student Affairs to approve the Circle's meetup. Shows up in Staff → Reviews → Meetups. */
+export async function proposeMeetup(circleId: string, kind: string) {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  const state = useCampus.getState();
+  const meetup = state.meetup;
+  const circle = state.circles[circleId] as { title?: string } | undefined;
+  await addDoc(collection(db, "staffMeetups"), {
+    circle: String(circle?.title || circleId),
+    by: state.greetingName || state.nickname || "A student",
+    title: meetup?.title || "Circle meetup",
+    detail: [kind || meetup?.selected, meetup?.whenLabel].filter(Boolean).join(" · "),
+    status: "proposed",
+    order: Date.now(),
+  });
+  await setDoc(doc(db, "circles", circleId, "meetups", "quiet-sit"), { proposedBy: uid }, { merge: true });
 }
 
 /** Answering a kindness card is helping, so it grows a root. */

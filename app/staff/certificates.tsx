@@ -2,16 +2,16 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Avatar, GoldButton, Pills, StaffFrame } from "../../src/components/staff/StaffChrome";
 import { C, t } from "../../src/theme";
-import { toggleCert, useStaff } from "../../src/live/staff";
+import { issueCerts, toggleCert, useStaff } from "../../src/live/staff";
 
 const PILLS = ["All 18", "Circle host", "Buddy", "Node volunteer"];
 
 export default function Certificates() {
   const certs = useStaff((s) => s.certs);
   const [pill, setPill] = useState(PILLS[0]);
-  const [issued, setIssued] = useState(false);
   const shown = certs.filter((c) => (pill === "All 18" ? true : c.sub.includes(pill)));
-  const ready = certs.filter((c) => c.verified).length;
+  const pending = certs.filter((c) => c.verified && !c.issued);
+  const issued = certs.filter((c) => c.issued).length;
   return (
     <StaffFrame title="Semester certificates" back="/staff/me" goldQuiet>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
@@ -33,7 +33,12 @@ export default function Certificates() {
         </View>
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 10 }]}>Hours and activity come from the app. You confirm the role.</Text>
         <View style={{ marginTop: 12 }}>
-          <GoldButton label={issued ? `Issued ${ready} certificates` : `Issue ${ready} certificates`} onPress={() => setIssued(true)} />
+          <GoldButton
+            label={pending.length ? `Issue ${pending.length} certificates` : `Issued ${issued} certificates`}
+            onPress={() => {
+              if (pending.length) void issueCerts(pending.map((c) => c.id));
+            }}
+          />
         </View>
       </ScrollView>
     </StaffFrame>

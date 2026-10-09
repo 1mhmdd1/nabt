@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { router } from "expo-router";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { getFirebase } from "../../src/firebase";
 import { StyleSheet, Text, View } from "react-native";
 import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, Outline, useScreen } from "../../src/components/voice/Kit";
@@ -31,8 +34,18 @@ export default function SaAccommodations() {
 function Body() {
   const copy = useScreen<Copy>("saAccommodation");
   const [arranged, setArranged] = useState(false);
+  const firstNick = copy?.rows[0]?.nickname || "";
+  // Arranged is kept on a small status doc, so it stays marked after leaving the screen.
+  useEffect(() => {
+    if (!firstNick) return;
+    return onSnapshot(doc(getFirebase().db, "accommodationStatus", firstNick), (snap) => setArranged(snap.data()?.status === "arranged"));
+  }, [firstNick]);
   if (!copy) return null;
   const [first, ...rest] = copy.rows;
+  const markArranged = () => {
+    setArranged(true);
+    void setDoc(doc(getFirebase().db, "accommodationStatus", first.nickname), { status: "arranged", at: Date.now() }).catch(() => undefined);
+  };
   return (
     <Screen bg={C.ground}>
       <Text style={styles.brand}>NABT · {copy.brand}</Text>
@@ -71,11 +84,11 @@ function Body() {
           <Text style={styles.hint}>{copy.hint}</Text>
           {arranged ? null : (
             <View style={{ marginTop: 12 }}>
-              <Gold label={copy.mark} onPress={() => setArranged(true)} />
+              <Gold label={copy.mark} onPress={markArranged} />
             </View>
           )}
           <View style={{ marginTop: 8 }}>
-            <Outline label={copy.message} onPress={() => setArranged(true)} />
+            <Outline label={copy.message} onPress={() => router.push("/staff/safety/outreach?caseId=fig-shared" as never)} />
           </View>
         </View>
         {rest.map((row) => (
