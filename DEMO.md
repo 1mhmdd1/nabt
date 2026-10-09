@@ -29,7 +29,7 @@ A UA ID is the year someone joined, then 5 digits. The year has to be from 2019 
 
 ## Click path
 
-1. Sign in as the student. Choose the nickname Gentle Olive.
+1. Sign in as the student (pick **Student**, type the ID only; `@ua.edu.lb` is fixed). The nickname is random: tap Reroll until you like one, then Use this name. Below, “Gentle Olive” stands for whichever nickname you kept.
 2. Home → Mood check-in → Okay → Save. The plant shows Sprout and one petal.
 3. Discover → Circles → Robotics Society. The gold Verified badge is on the About page. Join community.
 4. Open Chat. Send `text me 03 123 456` (or `stupid`, or a link). NABT blocks it and shows the reason. Rana’s “I'm stuck on the first exercise” message has a kindness card. Send “You've got this”, then Thanks on Karim’s reply.
@@ -37,13 +37,13 @@ A UA ID is the year someone joined, then 5 digits. The year has to be from 2019 
 6. Discover → For you. Sign “Later library hours”. “You said, we did” sits on the same page.
 7. Me → I'd like support → Just want to talk → Send.
 8. Me → Alumni mentors → Nour Saab. Send a short note.
-9. Settings → Switch account. Sign in as Student Affairs.
+9. Settings → Switch account. Pick **Staff** and sign in as Student Affairs.
    - Overview: weekly mood chart with exam weeks marked, and impact tiles (Check-ins includes Build Night).
    - Safety: the new request is “Gentle Olive · Just want to talk”.
    - Reviews → Petitions: Later library hours shows the new signature count.
    - Announce something short. The student sees it under Announcements.
-10. Switch to Nour. Mentor inbox → Accept Gentle Olive. A chat opens.
-11. Switch to admin. The audit log and Set a role are on that screen.
+10. Switch to Nour (pick **Alumni**). Mentor inbox → Accept Gentle Olive. A chat opens.
+11. Switch to admin (pick **Staff**, ID `admin`). The audit log and Set a role are on that screen.
 12. Switch to Lara. Settings → Chair dashboard. Members, mentors, attendance, and Nadine’s join request are on that screen.
 
 Sign-up stays clickable. Scan your ID card uses the camera, skips reading the photo, and prefills an editable sample (current year, then `48217`, name Lara Haddad, Faculty of Engineering). On the web, Continue does the same without a photo. The demo email code is `482913`. New accounts are students with the same demo password.

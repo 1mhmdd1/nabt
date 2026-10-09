@@ -11,35 +11,52 @@ import { FnError } from "../src/auth";
 import { markIntroSeen } from "../src/intro";
 import { idYear, isUaId } from "../src/local/ids";
 import { DEMO_PASSWORD } from "../src/local/mode";
-import { resetDemo } from "../src/local/store";
+import { findAccount, resetDemo } from "../src/local/store";
 import { signInDemo } from "../src/local/session";
 
-function loginOk(value: string) {
+/** Three ways in. Each signs in with the UA ID; the @ua.edu.lb part is fixed. */
+const TYPES = [
+  { id: "student", label: "Student" },
+  { id: "alumni", label: "Alumni" },
+  { id: "staff", label: "Staff" },
+] as const;
+type LoginType = (typeof TYPES)[number]["id"];
+
+function loginOk(value: string, type: LoginType) {
   const raw = value.trim().toLowerCase();
   if (!raw) return false;
-  if (raw.includes("@")) {
-    if (raw === "admin@ua.edu.lb") return true;
-    const local = raw.split("@")[0] || "";
-    return isUaId(local);
-  }
+  if (type === "staff" && raw === "admin") return true;
   return isUaId(raw);
 }
 
+function typeOf(claims: Record<string, unknown>): LoginType {
+  if (claims.sa === true || claims.admin === true || claims.role === "staff" || claims.role === "admin") return "staff";
+  if (claims.alumni === true || claims.role === "alumni") return "alumni";
+  return "student";
+}
+
 export default function Login() {
+  const [type, setType] = useState<LoginType>("student");
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const digits = id.replace(/\D/g, "");
-  const yearError = digits.length === 9 && !id.includes("@") && !isUaId(digits) ? `A UA ID uses a year from 2019 through ${new Date().getFullYear()}, then 5 digits.` : null;
-  const ok = loginOk(id) && password.length > 0;
+  const yearError = digits.length === 9 && !isUaId(digits) ? `A UA ID uses a year from 2019 through ${new Date().getFullYear()}, then 5 digits.` : null;
+  const ok = loginOk(id, type) && password.length > 0;
+  const email = `${id.trim().toLowerCase()}@ua.edu.lb`;
 
   async function send() {
     if (busy || !ok) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await signInDemo(id, password);
+      const account = findAccount(email);
+      if (account && typeOf(account.claims) !== type) {
+        const label = TYPES.find((item) => item.id === typeOf(account.claims))?.label || "another";
+        throw new FnError(403, "wrong_type", `That ID is a ${label} account. Pick ${label} above.`);
+      }
+      const result = await signInDemo(email, password);
       await markIntroSeen();
       if (result.claims.sa === true) {
         router.replace("/staff/overview" as never);
@@ -81,28 +98,49 @@ export default function Login() {
         </Pressable>
       </View>
       <Text style={[styles.h1, { marginTop: 36, textAlign: "center" }]}>Welcome back</Text>
-      <Text style={[styles.lead, { textAlign: "center" }]}>Sign in with your UA email.</Text>
-      <Text style={[styles.k, { marginTop: 28 }]}>UA email</Text>
+      <Text style={[styles.lead, { textAlign: "center" }]}>Sign in with your UA ID.</Text>
+      <View style={styles.types} accessibilityRole="tablist">
+        {TYPES.map((item) => (
+          <Pressable
+            key={item.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: type === item.id }}
+            onPress={() => {
+              setType(item.id);
+              setError(null);
+            }}
+            style={[styles.type, type === item.id && styles.typeOn]}
+          >
+            <Text style={[t(600, 14, 16), { color: type === item.id ? C.burgundy : C.white }]}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={[styles.k, { marginTop: 22 }]}>UA email</Text>
       <View style={[styles.emf, (error || yearError) && { borderColor: C.goldLight }]}>
         <TextInput
           value={id}
           onChangeText={(v) => {
             setError(null);
-            setId(v.slice(0, 40));
+            // Only the ID part is typed; the domain is fixed.
+            const local = v.split("@")[0] || "";
+            setId((type === "staff" ? local.replace(/[^a-zA-Z0-9]/g, "") : local.replace(/\D/g, "")).slice(0, 12));
           }}
           autoCapitalize="none"
           autoCorrect={false}
-          keyboardType="email-address"
-          placeholder="ID or UA email"
+          keyboardType={type === "staff" ? "default" : "number-pad"}
+          placeholder={type === "staff" ? "Staff ID" : "UA ID"}
           placeholderTextColor={C.w40}
           style={styles.input}
-          accessibilityLabel="UA email"
+          accessibilityLabel="UA ID"
           onSubmitEditing={() => void send()}
           returnKeyType="next"
         />
+        <Text style={styles.domain} accessibilityLabel="at ua.edu.lb, fixed">
+          @ua.edu.lb
+        </Text>
       </View>
       {yearError ? <Text style={styles.error}>{yearError}</Text> : null}
-      {id && isUaId(id.replace(/\D/g, "")) && !id.includes("@") ? <Text style={styles.note}>{idYear(id)} · {id.replace(/\D/g, "")}@ua.edu.lb</Text> : null}
+      {id && isUaId(digits) ? <Text style={styles.note}>Joined {idYear(id)}</Text> : null}
       <Text style={[styles.k, { marginTop: 16 }]}>Password</Text>
       <View style={[styles.emf, error && { borderColor: C.goldLight }]}>
         <TextInput
@@ -157,7 +195,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  input: { flex: 1, ...t(600, 17, 20), color: C.white, letterSpacing: 0.3, padding: 0 },
+  input: { flex: 1, minWidth: 0, ...t(600, 17, 20), color: C.white, letterSpacing: 0.3, padding: 0 },
+  domain: { flexShrink: 0, ...t(600, 17, 20), color: C.w64 },
+  types: { marginTop: 24, flexDirection: "row", gap: 8, padding: 4, borderRadius: 999, backgroundColor: C.raised },
+  type: { flex: 1, height: 40, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  typeOn: { backgroundColor: C.white },
   error: { marginTop: 10, ...t(500, 13, 18), color: C.goldLight },
   foot: { marginTop: "auto", paddingBottom: 40 },
   note: { marginTop: 14, textAlign: "center", ...t(500, 12, 16), color: C.w64 },

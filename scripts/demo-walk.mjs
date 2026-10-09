@@ -10,6 +10,7 @@ const BASE = process.env.NABT_WEB || "http://127.0.0.1:8081";
 const PASSWORD = "nabt-demo-local";
 const SHOTS = "/opt/cursor/artifacts/screens-v2";
 const blocked = [];
+let nick = "";
 const results = [];
 
 function pass(name) {
@@ -77,8 +78,11 @@ async function see(page, text, timeout = 20000) {
 
 async function login(page, email, urlPart) {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
-  await page.getByLabel("UA email").waitFor({ timeout: 30000 });
-  await page.getByLabel("UA email").fill(email);
+  await page.getByLabel("UA ID").waitFor({ timeout: 30000 });
+  // Sign-in has three types; the @ua.edu.lb part is fixed, so only the ID is typed.
+  const type = /^(admin|201903318)@/.test(email) ? "Staff" : /^201911457@/.test(email) ? "Alumni" : "Student";
+  await page.getByRole("tab", { name: type }).click();
+  await page.getByLabel("UA ID").fill(email.split("@")[0]);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(urlPart, { timeout: 25000 });
@@ -111,8 +115,12 @@ async function main() {
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: "domcontentloaded" });
     await login(page, "202212826@ua.edu.lb", /\/signup\/nickname/);
-    await page.getByLabel("Suggest your own").fill("Gentle Olive");
-    await see(page, "Looks good.");
+    // Nicknames are random only: reroll once, then keep whatever comes up.
+    const label = async () => (await page.getByLabel(/^Nickname /).first().getAttribute("aria-label")).slice("Nickname ".length);
+    const first = await label();
+    await page.getByLabel("Reroll").click();
+    nick = await label();
+    if (nick === first) throw new Error("Reroll kept the same nickname");
     await page.getByRole("button", { name: "Use this name" }).click();
     await page.waitForURL(/\/home/, { timeout: 20000 });
     pass("student nickname");
@@ -215,8 +223,8 @@ async function main() {
     pass("osa impact");
 
     await page.getByRole("tab", { name: "Safety" }).click();
-    await see(page, "Gentle Olive · Just want to talk");
-    await scrollTo(page, "Gentle Olive · Just want to talk");
+    await see(page, `${nick} · Just want to talk`);
+    await scrollTo(page, `${nick} · Just want to talk`);
     await shot(page, "03-osa-support-request.png");
     pass("osa safety");
 
@@ -239,8 +247,8 @@ async function main() {
 
     await switchTo(page, "201911457@ua.edu.lb", /\/home/);
     await page.goto(`${BASE}/alumni/inbox`, { waitUntil: "domcontentloaded" });
-    await see(page, "Gentle Olive");
-    await page.getByRole("button", { name: "Accept Gentle Olive" }).click();
+    await see(page, nick);
+    await page.getByRole("button", { name: `Accept ${nick}` }).click();
     await page.waitForURL(/\/dm\//, { timeout: 20000 });
     pass("alumni accept");
 
