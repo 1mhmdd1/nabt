@@ -12,6 +12,7 @@ import { Gate, Gold, Sheet, useScreen, WhiteBtn } from "../../../src/components/
 import { createAccommodation, useVoiceSafety } from "../../../src/live/voiceSafety";
 import { me, useCampus } from "../../../src/live";
 import { postFn } from "../../../src/fn";
+import { eventReminder, toggleEventReminder } from "../../../src/notify";
 import { C, t } from "../../../src/theme";
 import { rsvpEvent, useCommunity } from "../../../src/live/communities";
 import { saveScreenDescription, screenLine, useOrganizer } from "../../../src/live/eventCheckin";
@@ -75,6 +76,7 @@ function CommunityEvent({ id }: { id: string }) {
   const feedback = useFeedbackSummary(organizer ? id : "");
   const [added, setAdded] = useState(false);
   const [reminded, setReminded] = useState(false);
+  const [remindNote, setRemindNote] = useState("");
   const [screen, setScreen] = useState("");
   const [screenReady, setScreenReady] = useState(false);
   const [screenNotice, setScreenNotice] = useState("");
@@ -88,6 +90,18 @@ function CommunityEvent({ id }: { id: string }) {
       if (snap.exists()) setHere(true);
     });
   }, [id]);
+  useEffect(() => {
+    if (!id) return;
+    void eventReminder(id).then((rid) => setReminded(Boolean(rid)));
+  }, [id]);
+  async function remind() {
+    setRemindNote("");
+    try {
+      setReminded(await toggleEventReminder(id, event?.title || "Campus event", event?.whenLine || event?.meta));
+    } catch (err) {
+      setRemindNote(err instanceof Error ? err.message : "Could not set a reminder on this phone.");
+    }
+  }
   async function markHere() {
     await postFn("/event-check-in", { eventId: id });
     setHere(true);
@@ -205,9 +219,10 @@ function CommunityEvent({ id }: { id: string }) {
         <Pressable onPress={() => void rsvpEvent(id, !going)} style={eventStyles.go}>
           <Text style={[t(700, 16, 20), { color: C.burgundy }]}>{going ? "You’re going" : "I’ll go"}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" onPress={() => setReminded(true)} style={eventStyles.remind}>
-          <Text style={t(600, 15, 18)}>{reminded ? "Reminder set" : "Remind me"}</Text>
+        <Pressable accessibilityRole="button" accessibilityState={{ selected: reminded }} onPress={() => void remind()} style={eventStyles.remind}>
+          <Text style={t(600, 15, 18)}>{reminded ? "Reminder set · tap to cancel" : "Remind me"}</Text>
         </Pressable>
+        {remindNote ? <Text style={[t(500, 13, 18), { color: C.w64, textAlign: "center" }]}>{remindNote}</Text> : null}
       </ScrollView>
     </Screen>
   );
