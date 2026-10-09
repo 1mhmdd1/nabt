@@ -7,7 +7,6 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 
 const BASE = process.env.NABT_WEB || "http://127.0.0.1:8081";
-const PASSWORD = "nabt-demo-local";
 const SHOTS = "/opt/cursor/artifacts/screens-v2";
 const blocked = [];
 let nick = "";
@@ -79,12 +78,13 @@ async function see(page, text, timeout = 20000) {
 async function login(page, email, urlPart) {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("UA ID").waitFor({ timeout: 30000 });
-  // Sign-in has three types; the @ua.edu.lb part is fixed, so only the ID is typed.
-  const type = /^(admin|201903318)@/.test(email) ? "Staff" : /^201911457@/.test(email) ? "Alumni" : "Student";
-  await page.getByRole("tab", { name: type }).click();
+  // No password: the @ua.edu.lb part is fixed, a 6-digit code comes back and the demo shows it.
   await page.getByLabel("UA ID").fill(email.split("@")[0]);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Send me a sign-in code" }).click();
+  await page.waitForURL(/\/signup\/email/, { timeout: 20000 });
+  const shown = await findText(page, /Demo code: \d{6}/).innerText({ timeout: 20000 });
+  await page.getByLabel("Enter the 6-digit code").fill(shown.match(/\d{6}/)[0]);
+  await page.getByRole("button", { name: "Verify" }).click();
   await page.waitForURL(urlPart, { timeout: 25000 });
 }
 
@@ -97,7 +97,7 @@ async function switchTo(page, email, urlPart) {
 
 async function main() {
   fs.rmSync(SHOTS, { recursive: true, force: true });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME || undefined });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(20000);
   await page.route("**/*", (route) => {
@@ -170,14 +170,29 @@ async function main() {
     await scrollTo(page, "I’ll go");
     await page.getByText("I’ll go").click();
     await see(page, "You’re going");
-    await scrollTo(page, "Check in");
-    await page.getByRole("button", { name: "Check in" }).click();
-    await see(page, "Checked in");
-    await scrollTo(page, "Robotics Build Night");
+    // A student can only RSVP and set a reminder here. Check-in, End event and certificates belong to the organizer.
+    for (const word of ["Scan QR", "End event", "Event check-in", "Issue certificates"]) {
+      if (await page.getByText(word, { exact: true }).count()) throw new Error(`Student sees organizer control: ${word}`);
+    }
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, "Scan the organizer’s QR at the event to check in.");
+    pass("student has no self check-in");
+
+    // The Chair shows the QR; the student scans it (the QR opens this link with the code).
+    await switchTo(page, "202148217@ua.edu.lb", /\/home/);
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, /code [A-Z0-9]{6}/);
+    const code = (await findText(page, /code [A-Z0-9]{6}/).innerText()).match(/code ([A-Z0-9]{6})/)[1];
+    await switchTo(page, "202212826@ua.edu.lb", /\/home/);
+    await page.goto(`${BASE}/e/build-night/checkin?code=${code}`, { waitUntil: "domcontentloaded" });
+    await see(page, "You’re on the list for this event.");
     await shot(page, "07-event-checkin.png");
-    await scrollTo(page, "End event");
+    await switchTo(page, "202148217@ua.edu.lb", /\/home/);
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, nick);
     await page.getByRole("button", { name: "End event" }).click();
-    await see(page, "Event ended");
+    await see(page, /Event ended/);
+    await switchTo(page, "202212826@ua.edu.lb", /\/home/);
     pass("build night");
 
     await page.goto(`${BASE}/record`, { waitUntil: "domcontentloaded" });

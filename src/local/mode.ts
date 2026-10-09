@@ -4,4 +4,3 @@ export function demoLocal() {
 }
 
 export const DEMO_PASSWORD = "nabt-demo-local";
-export const DEMO_CODE = "482913";

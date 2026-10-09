@@ -38,7 +38,8 @@ export const useSignup = create<SignupState>((set) => ({
     set({ scanned: read, fullName: read.fullName, studentId: read.studentId, faculty: read.faculty, reading }),
   setReading: (reading) => set({ reading }),
   setFullName: (fullName) => set({ fullName }),
-  setStudentId: (studentId) => set({ studentId: studentId.replace(/\D/g, "").slice(0, 9) }),
+  // A 9-digit UA ID; the one exception is the campus admin's "admin" sign-in.
+  setStudentId: (studentId) => set({ studentId: studentId.trim().toLowerCase() === "admin" ? "admin" : studentId.replace(/\D/g, "").slice(0, 9) }),
   setCode: (demoCode, codeExpiresInSec) => set({ demoCode, codeExpiresInSec, codeSentAt: Date.now() }),
   reset: () =>
     set({ scanned: empty, fullName: "", studentId: "", faculty: "", reading: "idle", demoCode: null, codeSentAt: 0, codeExpiresInSec: 0 }),

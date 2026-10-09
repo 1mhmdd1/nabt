@@ -1,6 +1,6 @@
 import { FnError } from "../fn-error";
 import { initialsOf } from "../nickname/rules.mjs";
-import { DEMO_CODE, DEMO_PASSWORD } from "./mode";
+import { DEMO_PASSWORD } from "./mode";
 import {
   accounts,
   childDocs,
@@ -17,7 +17,12 @@ import {
 
 type Body = Record<string, unknown>;
 
-const pending = new Map<string, { fullName: string; faculty: string; mode: string }>();
+const pending = new Map<string, { fullName: string; faculty: string; mode: string; code: string }>();
+
+/** A fresh 6-digit code per request. The phone demo shows it under the boxes instead of emailing it. */
+function newCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 function uid() {
   const id = sessionUid();
@@ -179,16 +184,19 @@ export async function handleFn(path: string, raw: unknown) {
     const account = findAccount(studentId);
     if (mode === "login" && !account) throw new FnError(404, "unknown_id", "No account for that ID.");
     if (mode === "signup" && account) throw new FnError(409, "exists", "That ID already has an account. Sign in instead.");
-    pending.set(studentId, { fullName: String(body.fullName || ""), faculty: String(body.faculty || ""), mode });
-    return { ok: true, demoCode: DEMO_CODE, expiresIn: 600 };
+    const code = newCode();
+    pending.set(studentId, { fullName: String(body.fullName || ""), faculty: String(body.faculty || ""), mode, code });
+    return { ok: true, demoCode: code, expiresIn: 600 };
   }
 
   if (route === "/auth/verify") {
     const studentId = String(body.studentId || "");
     const code = String(body.code || "");
-    if (code !== DEMO_CODE) throw new FnError(400, "bad_code", "That code didn’t work.");
+    const draft = pending.get(studentId);
+    if (!draft || code !== draft.code) throw new FnError(400, "bad_code", "That code didn’t work. Send a new one if it expired.");
     const existing = findAccount(studentId);
     if (existing) {
+      pending.delete(studentId);
       setSession(existing.uid);
       const user = readDoc(`users/${existing.uid}`) || {};
       return {
@@ -200,8 +208,7 @@ export async function handleFn(path: string, raw: unknown) {
         nickname: String(user.nickname || ""),
       };
     }
-    const draft = pending.get(studentId);
-    if (!draft || draft.mode !== "signup") throw new FnError(404, "unknown_id", "No account for that ID.");
+    if (draft.mode !== "signup") throw new FnError(404, "unknown_id", "No account for that ID.");
     const id = `uid-${studentId}`;
     const email = `${studentId}@ua.edu.lb`;
     upsertAccount({

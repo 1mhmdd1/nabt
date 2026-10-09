@@ -64,7 +64,7 @@ export default function EmailCode() {
       const claims = await currentClaims(true);
       if (claims.sa === true) router.replace("/staff/overview" as never);
       else if (claims.role === "admin") router.replace("/admin/log" as never);
-      else if (result.isNew) router.replace("/signup/nickname" as never);
+      else if (result.isNew || (!result.nickname && claims.role !== "alumni")) router.replace("/signup/nickname" as never);
       else if (result.status === "approved") router.replace("/home" as never);
       else router.replace("/signup/pending" as never);
     } catch (err) {
