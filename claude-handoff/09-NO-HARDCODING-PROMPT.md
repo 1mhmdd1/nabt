@@ -2,6 +2,9 @@
 
 The design screens show **examples of real data**, not content to copy. Every name, message, thread, event, number, mood chart, petition, member and date in a mockup is **sample data** showing how the component looks when filled. Earlier, another tool hardcoded mockup content straight into screens (fixed chat messages, fixed threads, fixed names). That must never happen again.
 
+## This applies to EVERY screen, not just Spaces
+Treat **every** design screen in every role (student, Student Affairs, admin, Chair, alumni) the same way: Home, plant, check-ins, Discover, Circles, chats, Spaces, events, petitions, "You said, we did", announcements, record and certificates, mentors, dashboards, settings, sign-up. For each element ask: **is this UI (a fixed label, icon, layout) or is it data (anything a user, a club or the university creates, or anything counted or computed)?** Code the UI to match the design and bind the data to the data layer. Place only what belongs there for that user, role and state, and leave out what doesn't. If you're unsure, treat it as data.
+
 ## How to read every screen
 For each design screen:
 1. **Identify the components.** A Circle Space with posted threads = a `ThreadList` of `ThreadCard`s (author nickname, time, text, thanks/root counts, reply count, inline replies). A chat = a `MessageList` of `MessageBubble`s, plus `KindnessCard` and `DistressCard` variants. An events page = an `EventCard` list. A Student Affairs overview = `StatCard`, `MoodTrendChart`, `PendingList` and so on.
