@@ -54,3 +54,5 @@ ui-debug.log
 
 # your local campus (accounts created during testing)
 emulator-data/
+
+.env
