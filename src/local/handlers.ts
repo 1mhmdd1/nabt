@@ -31,12 +31,22 @@ function stage(petals: number) {
   return "Seed";
 }
 
-function grow(userId: string, which: "petals" | "roots") {
+/** Per-day caps so tapping the same thing again doesn't farm the plant. Each source counts on its own. */
+const DAILY_CAP: Record<string, number> = { mood: 1, voice: 1, task: 1, thanks: 3, kindness: 3, mentor: 5 };
+
+function grow(userId: string, which: "petals" | "roots", source: keyof typeof DAILY_CAP) {
   const user = readDoc(`users/${userId}`) || {};
+  const today = new Date().toDateString();
+  const prior = (user.growthDay || {}) as Record<string, unknown>;
+  const counts = (prior.day === today ? prior.counts || {} : {}) as Record<string, number>;
+  const used = Number(counts[source] || 0);
+  if (used >= DAILY_CAP[source]) return false;
+  patchDoc(`users/${userId}`, { growthDay: { day: today, counts: { ...counts, [source]: used + 1 } } });
   const plant = (user.plant || {}) as Record<string, unknown>;
   const petals = Number(plant.petals || 0) + (which === "petals" ? 1 : 0);
   const roots = Number(plant.roots || 0) + (which === "roots" ? 1 : 0);
   patchDoc(`users/${userId}`, { plant: { petals, roots, stage: stage(petals) } });
+  return true;
 }
 
 function requireUserDoc(userId: string) {
@@ -191,14 +201,35 @@ export async function handleFn(path: string, raw: unknown) {
   if (route === "/check-in" || route === "/task-done") {
     const userId = uid();
     requireUserDoc(userId);
-    grow(userId, "petals");
-    return { ok: true };
+    const source = route === "/task-done" ? "task" : body.source === "voice" ? "voice" : "mood";
+    const grew = grow(userId, "petals", source);
+    return { ok: true, grew };
+  }
+
+  if (route === "/kindness-reply") {
+    const userId = uid();
+    requireUserDoc(userId);
+    const grew = grow(userId, "roots", "kindness");
+    if (grew) {
+      writeDoc(`growthEvents/grow-${Date.now()}`, {
+        uid: userId,
+        kind: "root",
+        source: "kindness",
+        title: "A new root",
+        body: "You answered someone who needed a hand. A root grew.",
+        action: "",
+        badge: "+1",
+        circleId: String(body.circleId || ""),
+        replyId: String(body.messageId || ""),
+      });
+    }
+    return { ok: true, grew };
   }
 
   if (route === "/thanks") {
     const userId = uid();
     requireUserDoc(userId);
-    grow(userId, "roots");
+    if (!grow(userId, "roots", "thanks")) return { ok: true, grew: false };
     const id = `grow-${Date.now()}`;
     writeDoc(`growthEvents/${id}`, {
       uid: userId,
@@ -334,6 +365,10 @@ export async function handleFn(path: string, raw: unknown) {
       timeLabel: "Now",
     });
     patchDoc(`mentorRequests/${id}`, { status: "accepted", chatId });
+    // Mentoring is helping, so the mentor's plant grows a root.
+    const mentorUid = uid();
+    requireUserDoc(mentorUid);
+    grow(mentorUid, "roots", "mentor");
     return { chatId };
   }
 

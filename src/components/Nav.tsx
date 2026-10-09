@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { C, shadow, t } from "../theme";
+import { demoLocal } from "../local/mode";
 import {
   IconCalendar,
   IconChat,
@@ -21,9 +22,9 @@ const SLOTS: Record<TabId, number> = { home: 0, discover: 1, chats: 3, me: 4 };
 const ITEMS = [
   { title: "Post a thread", sub: "Ask your Circle, kindly", icon: <IconCompose />, href: "/circle/exam-week" },
   { title: "Propose a meetup", sub: "A counselor approves the spot", icon: <IconCalendar />, href: "/circle/exam-week" },
-  { title: "Leave a node note", sub: "Shows on a Hope Node screen", icon: <IconHeart />, href: "/n/engineering" },
+  { title: "Leave a node note", sub: "Shows on a Hope Node screen", icon: <IconHeart />, href: "/n/engineering", node: true },
   { title: "Start a petition", sub: "Ask Student Affairs for a change", icon: <IconDoc />, href: "/discover" },
-];
+].filter((item) => !(item.node && demoLocal())); // Hope Node is the next step, not part of the demo.
 
 export function FloatingNav({
   active,

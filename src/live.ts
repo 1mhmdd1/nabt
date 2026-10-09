@@ -836,6 +836,11 @@ export async function sendCircleMessage(circleId: string, text: string, extra?: 
   return ref.id;
 }
 
+/** Answering a kindness card is helping, so it grows a root. */
+export async function answerKindness(circleId: string, messageId: string) {
+  await postFn("/kindness-reply", { circleId, messageId });
+}
+
 export async function closeKindness(circleId: string, messageId: string) {
   const { db } = getFirebase();
   await updateDoc(doc(db, "circles", circleId, "messages", messageId), { kindnessClosed: true });
@@ -956,9 +961,9 @@ export async function answerChatRequest(id: string, status: "accepted" | "declin
   await updateDoc(doc(db, "chatRequests", id), { status });
 }
 
-export async function recordCheckIn() {
+export async function recordCheckIn(source: "mood" | "voice" = "mood") {
   try {
-    await postFn("/check-in", {});
+    await postFn("/check-in", { source });
   } catch {
     throw new Error("Check-in could not update the plant.");
   }

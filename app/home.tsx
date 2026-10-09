@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Redirect, router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { Screen } from "../src/components/Chrome";
 import { FloatingNav } from "../src/components/Nav";
 import { PlantArt } from "../src/components/Plant";
@@ -14,7 +15,7 @@ import {
   IconWordLotus,
 } from "../src/components/Icons";
 import { C, t } from "../src/theme";
-import { setCampusMode, useCampus } from "../src/live";
+import { me, setCampusMode, useCampus } from "../src/live";
 import { hideAnnouncement, useImpact } from "../src/live/impact";
 import { useNabt } from "../src/state";
 import { feedbackWasSkipped, sendFeedback, skipFeedback, useMyRecord } from "../src/live/records";
@@ -23,6 +24,7 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [modes, setModes] = useState(false);
   const campus = useCampus();
+  const focused = useIsFocused();
   const calm = useNabt((s) => s.calmMode);
   const announcements = useImpact((s) => s.announcements);
   const hides = useImpact((s) => s.hides);
@@ -79,12 +81,20 @@ export default function Home() {
               onPress={() => setModes(true)}
               style={styles.pill}
             >
-              <Text style={[t(600, 13, 13), { color: C.white }]}>{campus.modeLabel || "Pick a mode"}</Text>
+              <Text style={[t(600, 13, 13), { color: C.white, flexShrink: 1 }]} numberOfLines={1}>
+                {campus.modeLabel || "Pick a mode"}
+              </Text>
               <IconChevron />
             </Pressable>
           </View>
           <View style={styles.plantCol}>
-            <PlantArt badge={campus.rootNote?.badge || null} petals={campus.plant.petals} roots={campus.plant.roots} />
+            <PlantArt
+              badge={campus.rootNote?.badge || null}
+              petals={campus.plant.petals}
+              roots={campus.plant.roots}
+              owner={me() || "me"}
+              active={focused}
+            />
             <Text style={styles.caption}>
               <Text style={{ color: C.white, fontWeight: "600" }}>{campus.plant.stage || "Seed"}</Text>
               <Text>
@@ -273,11 +283,12 @@ const styles = StyleSheet.create({
   },
   hero: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginRight: -6, overflow: "visible" },
   heroText: { flex: 1, paddingBottom: 22, paddingLeft: 4, paddingRight: 8 },
-  plantCol: { width: 148, alignItems: "center" },
+  plantCol: { width: 148, flexShrink: 0, alignItems: "center" },
   greet: { ...t(600, 25, 30), color: C.white, letterSpacing: -0.12 },
   pill: {
     marginTop: 14,
     alignSelf: "flex-start",
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

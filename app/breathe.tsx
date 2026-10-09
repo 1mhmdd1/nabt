@@ -25,8 +25,18 @@ export default function Breathe() {
 }
 
 const styles = StyleSheet.create({
-  main: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  guide: { ...t(600, 16, 20), color: C.white, marginTop: 28, textAlign: "center" },
+  main: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  guide: {
+    ...t(600, 16, 20),
+    color: C.white,
+    marginTop: 28,
+    textAlign: "center",
+  },
   sub: { ...t(400, 13, 18), color: C.w64, marginTop: 8, textAlign: "center" },
   foot: { paddingHorizontal: 24, paddingBottom: 24 },
 });

@@ -7,7 +7,7 @@ import { Header, Seg } from "./index";
 import { C, t } from "../../../src/theme";
 import { useNabt } from "../../../src/state";
 import { OutgoingHalt } from "../../../src/moderation/outgoing";
-import { blockAuthor, closeKindness, me, reportMessage, sendCircleMessage, thankReply, useCampus, type ChatMsg } from "../../../src/live";
+import { answerKindness, blockAuthor, closeKindness, me, reportMessage, sendCircleMessage, thankReply, useCampus, type ChatMsg } from "../../../src/live";
 import { toast } from "../../../src/toast";
 import { writeSafetySignal } from "../../../src/live/voiceSafety";
 
@@ -33,7 +33,10 @@ export default function CircleChat() {
     if (!line) return;
     void sendCircleMessage(circleId, line, to ? { replyTo: to } : undefined)
       .then(async () => {
-        if (to) await closeKindness(circleId, to).catch(() => undefined);
+        if (to) {
+          await closeKindness(circleId, to).catch(() => undefined);
+          if (messages.some((m) => m.id === to && m.kindness)) await answerKindness(circleId, to).catch(() => undefined);
+        }
         setText("");
         setReplyTo("");
         setSupport(null);
