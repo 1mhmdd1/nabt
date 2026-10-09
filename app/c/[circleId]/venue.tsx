@@ -116,7 +116,7 @@ export default function VenueRequest() {
 
 const styles = {
   k: { ...t(700, 10, 12), letterSpacing: 1.1, textTransform: "uppercase" as const, color: C.w64 },
-  chair: { ...t(700, 10, 12), letterSpacing: 0.6, color: C.burgundy, backgroundColor: C.gold, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" as const },
+  chair: { ...t(700, 10, 12), letterSpacing: 0.6, color: C.white, borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" as const },
   link: { marginTop: 10, alignSelf: "flex-start" as const, height: 34, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.45)", alignItems: "center" as const, justifyContent: "center" as const },
   choice: { padding: 14, borderRadius: 16, backgroundColor: C.raised },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: C.w40 },

@@ -14,6 +14,7 @@ import { askVerification, decideJoin, eventIsLive, useCommunity } from "../../..
 import { useEventRoster } from "../../../src/live/eventCheckin";
 import { issueCircleCertificates } from "../../../src/live/records";
 import { demoLocal } from "../../../src/local/mode";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
 const SHORT: Record<string, string> = {
   events: "Events",
@@ -26,6 +27,14 @@ const SHORT: Record<string, string> = {
 };
 
 export default function ChairDashboard() {
+  return (
+    <ChairOnly>
+      <ChairDashboardScreen />
+    </ChairOnly>
+  );
+}
+
+function ChairDashboardScreen() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const [open, setOpen] = useState(false);
@@ -285,7 +294,7 @@ function venueLine(status?: string) {
 
 const styles = {
   me: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.deep, borderWidth: 2, borderColor: C.gold, alignItems: "center" as const, justifyContent: "center" as const },
-  chair: { ...t(700, 10, 12), letterSpacing: 0.8, color: C.burgundy, backgroundColor: C.gold, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden" as const },
+  chair: { ...t(700, 10, 12), letterSpacing: 0.8, color: C.white, borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden" as const },
   bento: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
   tile: { width: "48%" as const, backgroundColor: "#5A2222", borderRadius: 18, padding: 12, gap: 2 },
   main: { height: 48, borderRadius: 999, backgroundColor: C.white, alignItems: "center" as const, justifyContent: "center" as const },

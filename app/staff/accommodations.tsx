@@ -7,6 +7,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, Outline, useScreen } from "../../src/components/voice/Kit";
 import { StaffBar } from "../care/case";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Row = { initial: string; nickname: string; when: string; title: string; needs: string[]; note: string; status: string };
 type Copy = {
@@ -55,7 +56,7 @@ function Body() {
           <Text style={t(600, 12, 16)}>{copy.chip}</Text>
         </View>
       </View>
-      <View style={{ paddingHorizontal: 20, paddingBottom: 110 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}>
         <View style={[styles.case, styles.sel]}>
           <View style={styles.r1}>
             <View style={styles.av}>
@@ -105,7 +106,7 @@ function Body() {
           </View>
         ))}
         <Text style={styles.foot}>{copy.foot}</Text>
-      </View>
+      </ScrollBody>
       <StaffBar active="Events" />
     </Screen>
   );

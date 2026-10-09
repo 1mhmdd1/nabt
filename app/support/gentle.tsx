@@ -4,6 +4,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Outline, Top, useScreen, WhiteBtn } from "../../src/components/voice/Kit";
 import { markSofterStep } from "../../src/voice/session";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = { only: string; title: string; body: string; better: string; heavy: string; call: string; sent: string; peer: string };
 
@@ -24,7 +25,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title="Exam Week" />
-      <View style={{ paddingHorizontal: 20 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
         <View style={styles.msg}>
           <View style={styles.av}>
             <Text style={[t(600, 13, 16), { color: C.gold }]}>P</Text>
@@ -50,7 +51,7 @@ function Body() {
           </Text>
         </View>
         <Text style={styles.sys}>{copy.sent}</Text>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

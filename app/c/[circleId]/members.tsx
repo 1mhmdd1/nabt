@@ -38,7 +38,7 @@ export default function MembersDb() {
 
   return (
     <Screen>
-      <SubHead title={`Members · ${circle?.memberCount ?? members.length}`} chip={isChair ? "CHAIR" : undefined} />
+      <SubHead title={`Members · ${circle?.memberCount ?? members.length}`} chip={isChair ? "CHAIR" : undefined} chipGold={false} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
         {!isChair ? <Muted>The member database is for the Chair and the board member who holds the members privilege.</Muted> : null}
         <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
@@ -71,7 +71,7 @@ export default function MembersDb() {
                   <Text style={t(600, 15, 20)}>{name}</Text>
                   <Muted>{line}</Muted>
                 </View>
-                {chip ? <Text style={[styles.chip, mentor && styles.chipLine, chair && styles.chipGold]}>{chip}</Text> : null}
+                {chip ? <Text style={[styles.chip, (mentor || chair) && styles.chipLine]}>{chip}</Text> : null}
               </Pressable>
             );
           })}
@@ -93,5 +93,4 @@ const styles = {
   row: { flexDirection: "row" as const, gap: 12, alignItems: "center" as const, minHeight: 56, paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" },
   chip: { ...t(700, 10, 12), letterSpacing: 0.6, color: C.burgundy, backgroundColor: C.white, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden" as const },
   chipLine: { backgroundColor: "transparent", color: C.white, borderWidth: 1, borderColor: C.white },
-  chipGold: { backgroundColor: C.gold },
 };

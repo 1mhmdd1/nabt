@@ -5,6 +5,7 @@ import { IconLeaf, IconLock } from "../../src/components/Icons";
 import { useScreenReady } from "../../src/components/NodeChrome";
 import { C, t } from "../../src/theme";
 import { useNodeRewards, type EarnedBadge } from "../../src/live/nodeRewards";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 export default function Badges() {
   const earned = useNodeRewards((s) => s.earned);
@@ -19,7 +20,7 @@ export default function Badges() {
   }
   return (
     <Screen>
-      <View style={{ flex: 1, backgroundColor: "rgba(20,4,5,0.62)", justifyContent: "flex-end" }}>
+      <ScrollBody style={{ backgroundColor: "rgba(20,4,5,0.62)" }} contentContainerStyle={{ justifyContent: "flex-end" }}>
         <View style={{ backgroundColor: C.card, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", alignSelf: "center", marginBottom: 14 }} />
           <Text style={t(700, 20, 24)}>Badges · pin up to 3</Text>
@@ -47,7 +48,7 @@ export default function Badges() {
             <GoldButton label="Done" onPress={() => router.back()} />
           </View>
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

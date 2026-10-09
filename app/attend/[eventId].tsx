@@ -10,6 +10,7 @@ import { Muted } from "../../src/community/ui";
 import { C, t } from "../../src/theme";
 import { getFirebase } from "../../src/firebase";
 import { nodeEventLive, useNodeRewards, watchNode } from "../../src/live/nodeRewards";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 /** Phone event check-in. Members arrive here from the node QR. The mode switch stays on the Chair screen. */
 export default function EventCheckIn() {
@@ -50,7 +51,7 @@ export default function EventCheckIn() {
   return (
     <Screen>
       <BackBar title={title} />
-      <View style={{ paddingHorizontal: 22, alignItems: "center" }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 22, alignItems: "center", paddingBottom: 24 }}>
         <Text style={[t(600, 12, 16), { letterSpacing: 1.1, textTransform: "uppercase", color: C.w64 }]}>
           {live ? "Check-in is open" : "Check-in is closed"}
         </Text>
@@ -67,7 +68,7 @@ export default function EventCheckIn() {
         <Text style={[t(500, 15, 22), { marginTop: 16, textAlign: "center" }]}>
           {live ? "You’re on the list for this event." : "Ask the Chair if the event should be on the node."}
         </Text>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

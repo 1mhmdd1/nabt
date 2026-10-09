@@ -336,27 +336,16 @@ service cloud.firestore {
           && data().screenDescription.size() <= 90
           && noIdentity());
       match /rsvps/{uid} { allow read: if approved() || isSA(); allow write: if approved() && me(uid) && noIdentity(); }
-      // Community event check-in. A signed-in member marks only themselves, once.
+      // Community event check-in. Written only by the check-in Function after the member
+      // scans the organizer's QR code. Nobody can mark themselves present from the client.
       // Chair and board of the host Circle read the list. Staff and other students cannot.
-      // Hope Node event mode still uses this row to keep its live count honest.
       match /attendance/{uid} {
         allow read: if approved()
           && exists(/databases/$(db)/documents/events/$(eid))
           && eventData(eid).hostId is string
           && organizes(eventData(eid).hostId);
         allow update, delete: if false;
-        allow create: if approved() && me(uid)
-          && exists(/databases/$(db)/documents/events/$(eid))
-          && eventData(eid).hostType == 'circle'
-          && eventData(eid).hostId is string
-          && isMember(eventData(eid).hostId)
-          && onlyKeys(['uid', 'nickname', 'at'])
-          && data().uid == request.auth.uid
-          && data().nickname is string
-          && data().nickname.size() > 0
-          && data().nickname.size() <= 40
-          && data().at == request.time
-          && noIdentity();
+        allow create: if false;
       }
       match /pulse/{uid} { allow create: if approved() && me(uid); allow read: if false; }
     }
@@ -595,6 +584,10 @@ service cloud.firestore {
       allow create: if isSA() && noIdentity()
         && onlyKeys(['title', 'cost', 'detail', 'status', 'order']);
       allow update, delete: if false;
+    }
+    // Check-in codes for event QRs. Functions only.
+    match /eventCodes/{id} {
+      allow read, write: if false;
     }
     match /staffCertificates/{id} {
       allow read: if isSA();

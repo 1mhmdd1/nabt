@@ -5,6 +5,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Outline, Top, useScreen, WhiteBtn } from "../../src/components/voice/Kit";
 import { replyToCounselor } from "../../src/live/voiceSafety";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   title: string;
@@ -42,7 +43,7 @@ function Body() {
           </View>
         }
       />
-      <View style={{ paddingHorizontal: 20 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.note}>
           <Text style={styles.noteText}>{copy.note}</Text>
         </View>
@@ -72,7 +73,7 @@ function Body() {
             </View>
           </View>
         </View>
-      </View>
+      </ScrollBody>
       <View style={styles.cmp}>
         <TextInput
           value={text}

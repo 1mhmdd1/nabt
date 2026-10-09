@@ -6,6 +6,7 @@ import { Card, Muted, SubHead } from "../../../src/community/ui";
 import { C, t } from "../../../src/theme";
 import { useCampus } from "../../../src/live";
 import { submitReport, useImpact, type BoardSeat } from "../../../src/live/impact";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
 const BOARD = ["chair", "vice_chair", "events", "logistics", "media", "treasurer", "moderator", "hr"];
 const LABEL: Record<string, string> = {
@@ -20,6 +21,14 @@ const LABEL: Record<string, string> = {
 };
 
 export default function SemesterReport() {
+  return (
+    <ChairOnly>
+      <SemesterReportScreen />
+    </ChairOnly>
+  );
+}
+
+function SemesterReportScreen() {
   const { circleId, view } = useLocalSearchParams<{ circleId: string; view?: string }>();
   const id = circleId || "";
   const share = view === "share";
@@ -69,7 +78,7 @@ export default function SemesterReport() {
 
   return (
     <Screen>
-      <SubHead title={share ? "Summary" : "Semester report"} onBack={() => router.back()} chip={report?.status === "accepted" ? "Accepted" : undefined} />
+      <SubHead title={share ? "Summary" : "Semester report"} onBack={() => router.back()} chip={report?.status === "accepted" ? "Accepted" : undefined} chipGold={false} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48, gap: 10 }}>
         <Muted>{circle?.name || report?.circleName} · {report?.semester || "Fall 2026"}</Muted>
         <View style={{ flexDirection: "row", gap: 8 }}>

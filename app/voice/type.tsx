@@ -5,6 +5,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, LockLine, Top } from "../../src/components/voice/Kit";
 import { analyseCheckIn } from "../../src/voice/session";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 /** Typing counts the same as voice. The words stay on the phone except a safety signal. */
 export default function TypeInstead() {
@@ -20,7 +21,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title="Type instead" />
-      <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 24 }}>
         <Text style={styles.q}>How does right now feel, in your own words?</Text>
         <Text style={styles.note}>Voice results can misread different ways of speaking. Typing counts the same.</Text>
         <TextInput
@@ -41,7 +42,7 @@ function Body() {
           }}
         />
         <LockLine>Analysed on your phone. Nothing is uploaded except a safety signal when one is needed.</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

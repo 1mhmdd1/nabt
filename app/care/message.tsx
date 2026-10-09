@@ -5,6 +5,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, LockLine, Outline, Top, useScreen } from "../../src/components/voice/Kit";
 import { replyToCounselor, useVoiceSafety } from "../../src/live/voiceSafety";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = { title: string; sub: string; chip: string; sawLabel: string; saw: string; reply: string; skip: string; foot: string };
 
@@ -26,7 +27,7 @@ function Body() {
     <Screen bg={C.ground}>
       <Top title={copy.title} />
       <Text style={styles.sub}>{copy.sub}</Text>
-      <View style={{ paddingHorizontal: 20 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
         <View style={styles.chipWrap}>
           <View style={styles.chip}>
             <Text style={[t(600, 12, 16), { color: C.burgundy }]}>{copy.chip}</Text>
@@ -70,7 +71,7 @@ function Body() {
           <Outline label={copy.skip} onPress={() => router.back()} />
         </View>
         <LockLine>{copy.foot}</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

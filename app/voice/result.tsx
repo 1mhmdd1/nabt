@@ -7,6 +7,7 @@ import { declineAndMaybeSignal, useVoiceSession } from "../../src/voice/session"
 import { voiceCopy } from "../../src/voice/copy";
 import { TONE_COPY, VOICE_THRESHOLDS } from "../../src/voice/signals";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Suggestion = { title: string; sub: string; href: string };
 type Copy = {
@@ -68,7 +69,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title={copy.title} />
-      <View style={styles.pad}>
+      <ScrollBody contentContainerStyle={[styles.pad, { paddingBottom: 24 }]}>
         <View style={{ alignItems: "center", marginTop: 8 }}>
           <PlantLotus width={120} height={84} />
           <View style={styles.petal}>
@@ -108,7 +109,7 @@ function Body() {
           />
         </View>
         <LockLine>{copy.footer}</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

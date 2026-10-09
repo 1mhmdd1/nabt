@@ -7,6 +7,7 @@ import { C, t } from "../../src/theme";
 import { useNabt } from "../../src/state";
 import { voiceCopy } from "../../src/voice/copy";
 import { TONE_COPY } from "../../src/voice/signals";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Offer = {
   title: string;
@@ -40,7 +41,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title={copy.title} />
-      <View style={styles.main}>
+      <ScrollBody contentContainerStyle={[styles.main, { paddingBottom: 24 }]}>
         <Text style={styles.ey}>{copy.when}</Text>
         <Text style={styles.q}>{copy.question}</Text>
         <View style={styles.cos}>
@@ -74,7 +75,7 @@ function Body() {
           </View>
         )}
         <LockLine>{copy.footer}</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

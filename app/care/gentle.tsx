@@ -6,6 +6,7 @@ import { FloatingNav } from "../../src/components/Nav";
 import { Gate, Gold, LockLine, Outline, PlantLotus, useScreen } from "../../src/components/voice/Kit";
 import { markSofterStep } from "../../src/voice/session";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   greeting: string;
@@ -40,7 +41,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Text style={styles.greet}>{copy.greeting}</Text>
-      <View style={{ paddingHorizontal: 20, paddingBottom: 120 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
         <View style={styles.panel}>
           <View style={{ alignSelf: "center" }}>
             <PlantLotus width={88} height={60} />
@@ -76,7 +77,7 @@ function Body() {
           </View>
         </Pressable>
         <LockLine>{copy.foot}</LockLine>
-      </View>
+      </ScrollBody>
       <FloatingNav active="home" quiet open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
   );

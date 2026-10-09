@@ -11,6 +11,7 @@ import { useCampus } from "../src/live";
 import { useNodeRewards } from "../src/live/nodeRewards";
 import { totalsLine, useMyRecord } from "../src/live/records";
 import { demoLocal } from "../src/local/mode";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 const budSvg = markSvg.replace('viewBox="100 338 190 132"', 'viewBox="158 338 64 126"');
 
@@ -40,7 +41,7 @@ export default function Me() {
           <IconGear />
         </Pressable>
       </View>
-      <View style={styles.pad}>
+      <ScrollBody nav contentContainerStyle={styles.pad}>
         <View style={styles.prof}>
           <View style={styles.big}>
             <Text style={[t(600, 30, 30), { color: C.gold }]}>{initial || "·"}</Text>
@@ -110,10 +111,11 @@ export default function Me() {
             <Row title="My notes" sub={campus.notesSummary || "Nothing left at a node yet"} onPress={() => router.push("/notes" as never)} />
           )}
           <Row title="My petitions" sub={campus.petitionsSummary || "None signed yet"} onPress={() => router.push("/petition/new" as never)} />
-          <Row title={campus.alumni ? "Offer mentoring" : "I've graduated"} sub={campus.alumni ? "A chat, a CV, or advice" : "Switch this account to alumni"} onPress={() => router.push((campus.alumni ? "/alumni/offer" : "/alumni/graduate") as never)} />
+          {/* Alumni status is set by Student Affairs only. After that, the account may offer mentoring. */}
+          {campus.alumni ? <Row title="Offer mentoring" sub="A chat, a CV, or advice" onPress={() => router.push("/alumni/offer" as never)} /> : null}
           <Row title="Alumni mentors" sub="Browse alumni" onPress={() => router.push("/alumni" as never)} />
         </View>
-      </View>
+      </ScrollBody>
       <FloatingNav active="me" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
   );

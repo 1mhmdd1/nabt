@@ -4,6 +4,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, LockLine, Top, useScreen } from "../../src/components/voice/Kit";
 import { IconLotus } from "../../src/components/Icons";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Step = { title: string; sub: string; state: string };
 type Copy = {
@@ -44,7 +45,7 @@ function Body() {
           </View>
         }
       />
-      <View style={{ paddingHorizontal: 20, paddingBottom: 120 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
         <View style={styles.who}>
           <View style={styles.av}>
             <Text style={[t(600, 16, 18), { color: C.gold }]}>{copy.initial}</Text>
@@ -93,7 +94,7 @@ function Body() {
         <View style={{ marginTop: 8 }}>
           <Gold label={copy.primary} onPress={() => router.push("/care/message" as never)} />
         </View>
-      </View>
+      </ScrollBody>
       <StaffBar active="Safety" />
     </Screen>
   );

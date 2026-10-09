@@ -8,6 +8,7 @@ import { C, t } from "../../src/theme";
 import { getFirebase } from "../../src/firebase";
 import { me, useCampus } from "../../src/live";
 import { reviewOutgoing } from "../../src/moderation/outgoing";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 const REASONS = [
   { id: "stress", label: "Stress or exams" },
@@ -58,7 +59,7 @@ export default function SupportRequest() {
   return (
     <Screen>
       <BackBar title="I'd like support" />
-      <View style={{ paddingHorizontal: 20, gap: 8 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 24 }}>
         <Text style={t(500, 14, 20)}>This is a request, not a chat message. Student Affairs sees only what is on this card.</Text>
         {REASONS.map((item) => (
           <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={item.label} onPress={() => setReason(item.id)} style={[row, reason === item.id && on]}>
@@ -80,7 +81,7 @@ export default function SupportRequest() {
         <Pressable accessibilityRole="button" accessibilityLabel="Send support request" disabled={!reason || busy} onPress={() => void send()} style={btn}>
           <Text style={[t(700, 15, 18), { color: C.burgundy }]}>{busy ? "Sending…" : "Send"}</Text>
         </Pressable>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

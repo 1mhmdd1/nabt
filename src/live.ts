@@ -51,7 +51,11 @@ export type ChatMsg = {
   kindnessClosed?: boolean;
   replyTo?: string;
   reactions?: { icon: "heart" | "root"; label: string; mine?: boolean }[];
+  attachment?: ChatAttachment;
+  poll?: { question: string; options: string[] };
 };
+
+export type ChatAttachment = { type: "photo" | "video" | "document"; uri: string; name: string; size?: number; mimeType?: string; width?: number; height?: number };
 
 export type Answer = { id: string; displayName: string; initial: string; text: string; order: number };
 export type Reply = {
@@ -702,6 +706,8 @@ function watchCircle(db: ReturnType<typeof getFirebase>["db"], id: string) {
         kindnessClosed: data.kindnessClosed === true,
         replyTo: data.replyTo ? String(data.replyTo) : undefined,
         reactions: data.reactions as ChatMsg["reactions"],
+        attachment: data.attachment ? (data.attachment as ChatAttachment) : undefined,
+        poll: data.poll ? (data.poll as ChatMsg["poll"]) : undefined,
       } satisfies ChatMsg;
     });
     useCampus.setState((s) => ({ messages: { ...s.messages, [id]: messages } }));
@@ -838,23 +844,58 @@ export async function sendCircleMessage(circleId: string, text: string, extra?: 
   return ref.id;
 }
 
-/** Ask Student Affairs to approve the Circle's meetup. Shows up in Staff → Reviews → Meetups. */
-export async function proposeMeetup(circleId: string, kind: string) {
+/**
+ * A photo, video or document from this phone. The caption and file name go through the same
+ * on-phone safety check as a message, so phone numbers, links and blocked words still don't send.
+ */
+export async function sendCircleAttachment(circleId: string, attachment: ChatAttachment, caption = "") {
   const { db } = getFirebase();
   const uid = me();
   if (!uid) throw new Error("Sign in first.");
-  const state = useCampus.getState();
-  const meetup = state.meetup;
-  const circle = state.circles[circleId] as { title?: string } | undefined;
-  await addDoc(collection(db, "staffMeetups"), {
-    circle: String(circle?.title || circleId),
-    by: state.greetingName || state.nickname || "A student",
-    title: meetup?.title || "Circle meetup",
-    detail: [kind || meetup?.selected, meetup?.whenLabel].filter(Boolean).join(" · "),
-    status: "proposed",
-    order: Date.now(),
+  const text = caption.trim();
+  if (text) assertSendable(text, "circle", safetyAnon());
+  if (attachment.type === "document") assertSendable(attachment.name.replace(/\.[a-z0-9]{1,5}$/i, ""), "circle", safetyAnon());
+  const self = useCampus.getState();
+  const ref = await addDoc(collection(db, "circles", circleId, "messages"), {
+    authorUid: uid,
+    authorNickname: self.greetingName || self.nickname || "A student",
+    text: text.slice(0, 500),
+    kind: attachment.type === "document" ? "file" : "media",
+    attachment,
+    createdAt: serverTimestamp(),
   });
-  await setDoc(doc(db, "circles", circleId, "meetups", "quiet-sit"), { proposedBy: uid }, { merge: true });
+  return ref.id;
+}
+
+/** A poll: one question and two to four choices, each checked like a message. */
+export async function sendCirclePoll(circleId: string, question: string, options: string[]) {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  const q = question.trim();
+  const opts = options.map((o) => o.trim()).filter(Boolean).slice(0, 4);
+  if (!q) throw new Error("Ask a question first.");
+  if (opts.length < 2) throw new Error("Add at least two choices.");
+  if (new Set(opts.map((o) => o.toLowerCase())).size !== opts.length) throw new Error("Each choice needs to be different.");
+  for (const line of [q, ...opts]) assertSendable(line, "circle", safetyAnon());
+  const self = useCampus.getState();
+  const ref = await addDoc(collection(db, "circles", circleId, "messages"), {
+    authorUid: uid,
+    authorNickname: self.greetingName || self.nickname || "A student",
+    text: q.slice(0, 200),
+    kind: "poll",
+    poll: { question: q.slice(0, 200), options: opts.map((o) => o.slice(0, 60)) },
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/** One vote per person. Voting again moves your vote. */
+export async function votePoll(circleId: string, messageId: string, option: number) {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  await setDoc(doc(db, "circles", circleId, "messages", messageId, "votes", uid), { option, at: serverTimestamp() });
 }
 
 /** Answering a kindness card is helping, so it grows a root. */
@@ -999,10 +1040,12 @@ export async function postPromptAnswer(circleId: string, text: string) {
   assertSendable(body, "circle", safetyAnon());
   const self = useCampus.getState();
   await setDoc(doc(db, "circles", circleId, "prompts", "today", "answers", uid), {
+    authorUid: uid,
     text: body.slice(0, 200),
     displayName: self.greetingName || self.nickname,
     initial: self.initial,
-    order: 0,
+    order: Date.now(),
+    day: new Date().toDateString(),
     createdAt: serverTimestamp(),
   });
 }

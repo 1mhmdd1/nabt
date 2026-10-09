@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { IconBack } from "../components/Icons";
 import { C, t } from "../theme";
 
-/** Gold chip shared by Verified and CHAIR. Small caps, burgundy on gold. */
+/** Gold chip for Verified only: Student Affairs verified this community. Small caps, burgundy on gold. */
 export function Badge({ label }: { label: string }) {
   return (
     <View style={styles.badge}>

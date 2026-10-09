@@ -3,6 +3,7 @@ import { Screen, Avatar } from "../src/components/Chrome";
 import { BackBar, useScreenReady } from "../src/components/NodeChrome";
 import { C, t } from "../src/theme";
 import { useNodeRewards } from "../src/live/nodeRewards";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 export default function CampusGoal() {
   const rewards = useNodeRewards();
@@ -19,7 +20,7 @@ export default function CampusGoal() {
   return (
     <Screen>
       <BackBar title={goal.title} />
-      <View style={{ paddingHorizontal: 24 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
         <View style={{ alignSelf: "flex-start", height: 24, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: C.w40, justifyContent: "center" }}>
           <Text style={t(600, 11.5, 14)}>{goal.chip}</Text>
         </View>
@@ -47,7 +48,7 @@ export default function CampusGoal() {
             </View>
           ))}
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

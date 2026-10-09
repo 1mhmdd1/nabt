@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Screen } from "../../../src/components/Chrome";
 import { Muted, SubHead } from "../../../src/community/ui";
 import { C, t } from "../../../src/theme";
 import { useCampus } from "../../../src/live";
 import { joinCommunity } from "../../../src/live/communities";
+import { ScrollBody } from "../../../src/components/ScrollBody";
 
 export default function JoinCommunity() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
@@ -14,6 +15,7 @@ export default function JoinCommunity() {
   const campus = useCampus();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const { height } = useWindowDimensions();
   const name = circle?.name || "this Circle";
 
   async function join() {
@@ -40,7 +42,7 @@ export default function JoinCommunity() {
 
   return (
     <Screen>
-      <SubHead title={name} chip={circle?.verified ? "✓ Verified" : undefined} chipGold={false} />
+      <SubHead title={name} chip={circle?.verified ? "Verified" : undefined} />
       <View style={{ paddingHorizontal: 20 }}>
         <Muted>
           {circle?.memberCount ?? 0} members · {circle?.officialLine || "Official UA club"}
@@ -49,20 +51,22 @@ export default function JoinCommunity() {
       <Pressable style={styles.scrim} onPress={() => router.back()} accessibilityLabel="Dismiss" />
       <View style={styles.sheet}>
         <View style={styles.grab} />
-        <Text style={t(700, 20, 26)}>Join {name}</Text>
-        <View style={styles.notice}>
-          <Text style={t(700, 14.5, 20)}>
-            This community can see your name, UA email and contact info, and your training attendance.
-          </Text>
-        </View>
-        <Muted>Never your plant, mood, Hope Node, DMs or other Circles.</Muted>
-        {error ? <Text style={t(500, 13, 18)}>{error}</Text> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Join community" disabled={busy} onPress={() => void join()} style={styles.join}>
-          <Text style={[t(700, 16, 20), { color: C.burgundy }]}>{busy ? "Joining…" : "Join community"}</Text>
-        </Pressable>
-        <Pressable onPress={() => router.back()} style={styles.later}>
-          <Text style={t(600, 14, 18)}>Not now</Text>
-        </Pressable>
+        <ScrollBody style={{ flex: 0, maxHeight: height * 0.7 }} contentContainerStyle={{ gap: 10 }}>
+          <Text style={t(700, 20, 26)}>Join {name}</Text>
+          <View style={styles.notice}>
+            <Text style={t(700, 14.5, 20)}>
+              This community can see your name, UA email and contact info, and your training attendance.
+            </Text>
+          </View>
+          <Muted>Never your plant, mood, Hope Node, DMs or other Circles.</Muted>
+          {error ? <Text style={t(500, 13, 18)}>{error}</Text> : null}
+          <Pressable accessibilityRole="button" accessibilityLabel="Join community" disabled={busy} onPress={() => void join()} style={styles.join}>
+            <Text style={[t(700, 16, 20), { color: C.burgundy }]}>{busy ? "Joining…" : "Join community"}</Text>
+          </Pressable>
+          <Pressable onPress={() => router.back()} style={styles.later}>
+            <Text style={t(600, 14, 18)}>Not now</Text>
+          </Pressable>
+        </ScrollBody>
       </View>
     </Screen>
   );

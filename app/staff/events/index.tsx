@@ -4,6 +4,7 @@ import Svg, { Line } from "react-native-svg";
 import { Seg, StaffFrame } from "../../../src/components/staff/StaffChrome";
 import { C, t } from "../../../src/theme";
 import { useStaff } from "../../../src/live/staff";
+import { ScrollBody } from "../../../src/components/ScrollBody";
 
 type Ev = { title: string; sub: string; left: number; width: number; tone: string; extra?: string; href?: string };
 type Row = { name: string; sub: string; top: number; events: Ev[] };
@@ -26,73 +27,75 @@ export default function Schedule() {
           { label: "Requests", count: requests, href: "/staff/events/requests" },
         ]}
       />
-      <View style={styles.days}>
-        {days.map((d) => (
-          <View key={d.d} style={[styles.day, d.on && styles.dayOn]}>
-            <Text style={[t(600, 10.5, 12), { color: d.on ? "rgba(65,21,21,0.7)" : C.w64 }]}>{d.d}</Text>
-            <Text style={[t(700, 15, 16), { color: d.on ? C.burgundy : C.white, marginTop: 5 }]}>{d.n}</Text>
-          </View>
-        ))}
-        <View style={styles.vw}><Text style={t(600, 12, 14)}>Day ▾</Text></View>
-      </View>
-      <View style={styles.tlw}>
-        <View style={styles.tl2}>
-          {hours.map((h, i) => {
-            const left = 66 + i * 88;
-            return (
-              <View key={h}>
-                <Text style={[styles.hr, { left: left - 12 }]}>{h}</Text>
-                <View style={[styles.vl, { left }]} />
-              </View>
-            );
-          })}
-          {rows.map((row) =>
-            row.events.map((ev) => (
-              <Pressable
-                key={ev.title}
-                onPress={() => ev.href && router.push(ev.href as never)}
-                style={[
-                  styles.ev,
-                  { left: ev.left, width: ev.width, top: row.top + 6 },
-                  ev.tone === "live" && styles.live,
-                  ev.tone === "p" && styles.pending,
-                ]}
-              >
-                {ev.tone === "p" ? <PendingHatch /> : null}
-                <Text numberOfLines={1} style={[t(700, 11.5, 14), ev.tone === "live" && { color: C.burgundy }]}>{ev.title}</Text>
-                <Text numberOfLines={1} style={[t(500, 10, 13), { color: ev.tone === "live" ? "rgba(65,21,21,0.7)" : C.w64, marginTop: 3 }]}>{ev.sub}</Text>
-                {ev.extra ? <Text style={[styles.em, ev.tone === "live" && { color: C.burgundy }]}>{ev.extra}</Text> : null}
-              </Pressable>
-            )),
-          )}
-          <View style={[styles.now, { left: nowLeft }]} />
-          <View style={[styles.nowl, { left: nowLeft - 20 }]}>
-            <Text style={[t(700, 9, 10), { color: C.burgundy }]}>{String(schedule?.nowLabel || "12:54")}</Text>
-          </View>
-        </View>
-        {rows.flatMap((row) => row.events).map((ev) => (
-          <Text key={ev.title} accessibilityLabel={`Scheduled ${ev.title}`}>{ev.title} · {ev.sub}</Text>
-        ))}
-        <View style={styles.vcol}>
-          {rows.map((row) => (
-            <View key={row.name} style={[styles.vn, { top: row.top }]}>
-              <Text style={t(700, 11, 13)}>{row.name}</Text>
-              <Text style={[t(500, 9.5, 12), { color: C.w64, marginTop: 4 }]}>{row.sub}</Text>
+      <ScrollBody nav>
+        <View style={styles.days}>
+          {days.map((d) => (
+            <View key={d.d} style={[styles.day, d.on && styles.dayOn]}>
+              <Text style={[t(600, 10.5, 12), { color: d.on ? "rgba(65,21,21,0.7)" : C.w64 }]}>{d.d}</Text>
+              <Text style={[t(700, 15, 16), { color: d.on ? C.burgundy : C.white, marginTop: 5 }]}>{d.n}</Text>
             </View>
           ))}
+          <View style={styles.vw}><Text style={t(600, 12, 14)}>Day ▾</Text></View>
         </View>
-      </View>
-      <View style={styles.pad}>
-        <View style={styles.sum}>
-          {summary.map((s) => (
-            <Text key={s.label} style={[t(500, 11.5, 14), { color: C.w70 }]}>
-              <Text style={t(700, 16, 18)}>{s.n} </Text>
-              {s.label}
-            </Text>
+        <View style={styles.tlw}>
+          <View style={styles.tl2}>
+            {hours.map((h, i) => {
+              const left = 66 + i * 88;
+              return (
+                <View key={h}>
+                  <Text style={[styles.hr, { left: left - 12 }]}>{h}</Text>
+                  <View style={[styles.vl, { left }]} />
+                </View>
+              );
+            })}
+            {rows.map((row) =>
+              row.events.map((ev) => (
+                <Pressable
+                  key={ev.title}
+                  onPress={() => ev.href && router.push(ev.href as never)}
+                  style={[
+                    styles.ev,
+                    { left: ev.left, width: ev.width, top: row.top + 6 },
+                    ev.tone === "live" && styles.live,
+                    ev.tone === "p" && styles.pending,
+                  ]}
+                >
+                  {ev.tone === "p" ? <PendingHatch /> : null}
+                  <Text numberOfLines={1} style={[t(700, 11.5, 14), ev.tone === "live" && { color: C.burgundy }]}>{ev.title}</Text>
+                  <Text numberOfLines={1} style={[t(500, 10, 13), { color: ev.tone === "live" ? "rgba(65,21,21,0.7)" : C.w64, marginTop: 3 }]}>{ev.sub}</Text>
+                  {ev.extra ? <Text style={[styles.em, ev.tone === "live" && { color: C.burgundy }]}>{ev.extra}</Text> : null}
+                </Pressable>
+              )),
+            )}
+            <View style={[styles.now, { left: nowLeft }]} />
+            <View style={[styles.nowl, { left: nowLeft - 20 }]}>
+              <Text style={[t(700, 9, 10), { color: C.burgundy }]}>{String(schedule?.nowLabel || "12:54")}</Text>
+            </View>
+          </View>
+          {rows.flatMap((row) => row.events).map((ev) => (
+            <Text key={ev.title} accessibilityLabel={`Scheduled ${ev.title}`}>{ev.title} · {ev.sub}</Text>
           ))}
+          <View style={styles.vcol}>
+            {rows.map((row) => (
+              <View key={row.name} style={[styles.vn, { top: row.top }]}>
+                <Text style={t(700, 11, 13)}>{row.name}</Text>
+                <Text style={[t(500, 9.5, 12), { color: C.w64, marginTop: 4 }]}>{row.sub}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-        <Text style={styles.ph}>Today’s rooms. Open a block for the event.</Text>
-      </View>
+        <View style={styles.pad}>
+          <View style={styles.sum}>
+            {summary.map((s) => (
+              <Text key={s.label} style={[t(500, 11.5, 14), { color: C.w70 }]}>
+                <Text style={t(700, 16, 18)}>{s.n} </Text>
+                {s.label}
+              </Text>
+            ))}
+          </View>
+          <Text style={styles.ph}>Today’s rooms. Open a block for the event.</Text>
+        </View>
+      </ScrollBody>
     </StaffFrame>
   );
 }

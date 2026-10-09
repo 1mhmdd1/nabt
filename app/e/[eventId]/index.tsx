@@ -4,18 +4,17 @@ import { doc, getDoc } from "firebase/firestore";
 import { router, useLocalSearchParams } from "expo-router";
 import { getFirebase } from "../../../src/firebase";
 import { FeedbackSummary } from "../../../src/components/FeedbackSummary";
-import { issueEventCertificates, useFeedbackSummary } from "../../../src/live/records";
+import { useFeedbackSummary } from "../../../src/live/records";
 import { Screen } from "../../../src/components/Chrome";
 import { LotusArt } from "../../../src/components/LotusArt";
 import { IconBack, IconChevronRight } from "../../../src/components/Icons";
 import { Gate, Gold, Sheet, useScreen, WhiteBtn } from "../../../src/components/voice/Kit";
 import { createAccommodation, useVoiceSafety } from "../../../src/live/voiceSafety";
 import { me, useCampus } from "../../../src/live";
-import { postFn } from "../../../src/fn";
 import { eventReminder, toggleEventReminder } from "../../../src/notify";
 import { C, t } from "../../../src/theme";
 import { rsvpEvent, useCommunity } from "../../../src/live/communities";
-import { saveScreenDescription, screenLine, useOrganizer } from "../../../src/live/eventCheckin";
+import { saveScreenDescription, screenLine, useEventOrganizer } from "../../../src/live/eventCheckin";
 import { ScreenDescription } from "../../../src/components/ScreenDescription";
 
 type Need = { id: string; label: string };
@@ -72,7 +71,8 @@ function CommunityEvent({ id }: { id: string }) {
   const event = listed || extra;
   const going = useCommunity((s) => Boolean(s.myRsvps[id]));
   const faces = event?.goingFaces || [];
-  const { organizer } = useOrganizer(event?.hostType === "circle" ? event.hostId : "");
+  // Only the organizer (the Chair, or Student Affairs for an OSA event) runs check-in.
+  const organizer = useEventOrganizer(event);
   const feedback = useFeedbackSummary(organizer ? id : "");
   const [added, setAdded] = useState(false);
   const [reminded, setReminded] = useState(false);
@@ -80,9 +80,7 @@ function CommunityEvent({ id }: { id: string }) {
   const [screen, setScreen] = useState("");
   const [screenReady, setScreenReady] = useState(false);
   const [screenNotice, setScreenNotice] = useState("");
-  const [issued, setIssued] = useState(false);
   const [here, setHere] = useState(false);
-  const [ended, setEnded] = useState(false);
   useEffect(() => {
     const userId = me();
     if (!userId || !id) return;
@@ -101,14 +99,6 @@ function CommunityEvent({ id }: { id: string }) {
     } catch (err) {
       setRemindNote(err instanceof Error ? err.message : "Could not set a reminder on this phone.");
     }
-  }
-  async function markHere() {
-    await postFn("/event-check-in", { eventId: id });
-    setHere(true);
-  }
-  async function endEvent() {
-    await postFn("/end-event", { eventId: id });
-    setEnded(true);
   }
   const seeded = screenLine(event?.screenDescription, event?.description || event?.blurb);
   useEffect(() => {
@@ -161,29 +151,9 @@ function CommunityEvent({ id }: { id: string }) {
             </View>
             <IconChevronRight />
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Check in" onPress={() => void markHere()} style={eventStyles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={t(600, 14, 18)}>{here ? "Checked in" : "Check in"}</Text>
-              <Text style={eventStyles.sub}>{here ? "You are marked present" : "Confirms you are here"}</Text>
-            </View>
-            <IconChevronRight />
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Scan QR" onPress={() => void markHere()} style={eventStyles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={t(600, 14, 18)}>Scan QR</Text>
-              <Text style={eventStyles.sub}>Same check-in, if you have the door code</Text>
-            </View>
-            <IconChevronRight />
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="End event" onPress={() => void endEvent()} style={eventStyles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={t(600, 14, 18)}>{ended ? "Event ended" : "End event"}</Text>
-              <Text style={eventStyles.sub}>{ended ? "Certificate saved to My record" : "Asks for feedback and writes the certificate"}</Text>
-            </View>
-            <IconChevronRight />
-          </Pressable>
         </View>
-        <Text style={[t(400, 13.5, 20), { color: C.w80, marginTop: 12 }]}>{event?.blurb}</Text>
+        {here ? <Text style={[t(600, 13, 18), { color: C.white, marginTop: 12 }]}>You’re checked in.</Text> : null}
+        <Text style={[t(400, 13.5, 20), { color: C.w80, marginTop: 12 }]}>{event?.blurb || event?.description}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
           <View style={{ flexDirection: "row" }}>
             {faces.map((letter, i) => (
@@ -198,7 +168,7 @@ function CommunityEvent({ id }: { id: string }) {
           <Pressable accessibilityRole="button" onPress={() => router.push(`/e/${id}/checkin` as never)} style={eventStyles.row}>
             <View style={{ flex: 1 }}>
               <Text style={t(600, 14, 18)}>Event check-in</Text>
-              <Text style={eventStyles.sub}>QR, live count, and who is here</Text>
+              <Text style={eventStyles.sub}>QR, who is here, end event, certificates</Text>
             </View>
             <IconChevronRight />
           </Pressable>
@@ -220,15 +190,6 @@ function CommunityEvent({ id }: { id: string }) {
             </Pressable>
             {screenNotice ? <Text style={[t(500, 13, 18), { color: C.w64 }]}>{screenNotice}</Text> : null}
           </View>
-        ) : null}
-        {organizer ? (
-          <Pressable accessibilityRole="button" onPress={() => void issueEventCertificates(id).then(() => setIssued(true))} style={eventStyles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={t(600, 14, 18)}>{issued ? "Certificates issued" : "Issue certificates"}</Text>
-              <Text style={eventStyles.sub}>For everyone who checked in</Text>
-            </View>
-            <IconChevronRight />
-          </Pressable>
         ) : null}
         {feedback ? <FeedbackSummary row={feedback} /> : null}
         <Pressable onPress={() => void rsvpEvent(id, !going)} style={eventStyles.go}>

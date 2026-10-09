@@ -7,6 +7,7 @@ import { IconChevronRight } from "../../src/components/Icons";
 import { declineAndMaybeSignal, markSofterStep } from "../../src/voice/session";
 import { C, t } from "../../src/theme";
 import { useNabt } from "../../src/state";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   title: string;
@@ -42,7 +43,7 @@ function Body() {
   if (!copy) return null;
   return (
     <Screen bg={C.ground}>
-      <View style={styles.main}>
+      <ScrollBody contentContainerStyle={[styles.main, { paddingBottom: 24 }]}>
         <PlantLotus width={110} height={76} />
         <Text style={styles.h}>{plain ? copy.titlePlain : copy.title}</Text>
         <Text style={styles.body}>{plain ? copy.bodyPlain : copy.body}</Text>
@@ -91,7 +92,7 @@ function Body() {
             }}
           />
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

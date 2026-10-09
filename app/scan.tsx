@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { Screen, GoldButton } from "../src/components/Chrome";
 import { BackBar, useScreenReady } from "../src/components/NodeChrome";
 import { C, t } from "../src/theme";
-import { markEventPresent, useNodeRewards } from "../src/live/nodeRewards";
+import { useNodeRewards } from "../src/live/nodeRewards";
 
 export default function Scan() {
   const ready = useNodeRewards((s) => s.ready);
@@ -44,11 +44,10 @@ export default function Scan() {
                 label="Open node"
                 onPress={() => {
                   const typed = (code || "engineering").trim();
-                  if (typed.startsWith("event:")) {
-                    const eventId = typed.slice("event:".length);
-                    void markEventPresent(eventId)
-                      .catch(() => undefined)
-                      .finally(() => router.push(`/e/${eventId}/checkin` as never));
+                  // An event check-in only counts with the organizer's code from their QR.
+                  const event = typed.match(/\/e\/([^/?#]+)\/checkin\?code=([A-Za-z0-9]+)/);
+                  if (event) {
+                    router.push(`/e/${event[1]}/checkin?code=${event[2]}` as never);
                     return;
                   }
                   router.push(`/n/${typed}` as never);

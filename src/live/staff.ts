@@ -610,6 +610,7 @@ export async function approveMeetup(id: string, spot: string) {
     spot,
     approvedBy: staffUid(),
   });
+  await answerMeetupRequest(id, { status: "approved", spot });
 }
 
 export async function declineMeetup(id: string) {
@@ -618,6 +619,15 @@ export async function declineMeetup(id: string) {
     status: "declined",
     approvedBy: staffUid(),
   });
+  await answerMeetupRequest(id, { status: "declined" });
+}
+
+/** The student who proposed sees the answer on their Circle's Space. */
+async function answerMeetupRequest(id: string, answer: Record<string, unknown>) {
+  const { db } = getFirebase();
+  const row = useStaff.getState().meetups.find((m) => m.id === id) as (MeetupRow & { circleId?: string; uid?: string }) | undefined;
+  if (!row?.circleId || !row.uid) return;
+  await setDoc(doc(db, "circles", row.circleId, "meetupRequests", row.uid), answer, { merge: true }).catch(() => undefined);
 }
 
 export async function openSupportChat(id: string) {

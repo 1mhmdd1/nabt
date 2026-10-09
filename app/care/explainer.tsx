@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { Screen } from "../../src/components/Chrome";
 import { Gate, PlantLotus, Top, useScreen, WhiteBtn } from "../../src/components/voice/Kit";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Step = { title: string; sub: string; state: string };
 type Copy = {
@@ -32,7 +33,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title={copy.title} />
-      <View style={{ paddingHorizontal: 20 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
         <View style={{ alignItems: "center" }}>
           <PlantLotus width={96} height={66} />
         </View>
@@ -61,7 +62,7 @@ function Body() {
         <View style={{ marginTop: 16 }}>
           <WhiteBtn label={copy.done} onPress={() => router.back()} />
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

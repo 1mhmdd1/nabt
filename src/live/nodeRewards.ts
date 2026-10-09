@@ -575,50 +575,20 @@ export async function endNodeEvent(nodeId: string, eventId?: string) {
   await postFn("/node-mode", { nodeId, eventId: id, action: "end" });
 }
 
-/** A member scan. The node count moves first when this event is on the tablet, then the attendance row. */
-export async function markEventPresent(eventId: string) {
-  const { auth, db } = getFirebase();
-  const uid = auth.currentUser?.uid;
-  if (!uid) throw new Error("Sign in on your phone first.");
-  const ev = await getDoc(doc(db, "events", eventId));
-  const data = ev.data();
-  if (!data) throw new Error("This event is not on the calendar.");
-  const hostId = String(data.hostId || "");
-  const hostType = String(data.hostType || "");
-  if (hostType === "circle" && hostId) {
-    try {
-      const member = await getDoc(doc(db, "circles", hostId, "members", uid));
-      if (!member.exists()) throw new Error("This check-in is for members of the Circle.");
-    } catch (err) {
-      if (err instanceof Error && err.message.startsWith("This check-in")) throw err;
-      throw new Error("This check-in is for members of the Circle.");
-    }
-  }
-  const nodeId = String(data.nodeId || "");
-  const nickname = useNodeRewards.getState().nickname || "Member";
-  if (nodeId) {
-    try {
-      await updateDoc(doc(db, "nodes", nodeId), { presentCount: increment(1) });
-    } catch {
-      /* The node is not showing this event. Attendance still counts for the Circle. */
-    }
-  }
-  let already = false;
-  try {
-    await setDoc(doc(db, "events", eventId, "attendance", uid), { uid, nickname, at: serverTimestamp() });
-  } catch (err) {
-    const code = String((err as { code?: string }).code || "");
-    if (!code.includes("permission-denied")) throw err;
-    already = true;
-  }
+/**
+ * A member scans the organizer's event QR. The server checks the code and writes the
+ * attendance row. Nobody can mark themselves present without that code.
+ */
+export async function markEventPresent(eventId: string, code: string) {
+  const res = (await postFn("/event-check-in", { eventId, code })) as { already?: boolean; title?: string; hostId?: string; hostType?: string; verified?: boolean; nodeId?: string };
   return {
-    nodeId,
-    title: String(data.title || "Event"),
-    hostId,
-    hostType,
-    already,
-    nickname,
-    verified: data.verified !== false,
+    nodeId: String(res.nodeId || ""),
+    title: String(res.title || "Event"),
+    hostId: String(res.hostId || ""),
+    hostType: String(res.hostType || ""),
+    already: Boolean(res.already),
+    nickname: useNodeRewards.getState().nickname || "Member",
+    verified: res.verified !== false,
   };
 }
 

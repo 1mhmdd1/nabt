@@ -9,6 +9,7 @@ import { C, t } from "../../src/theme";
 import { useNabt } from "../../src/state";
 import { voiceCopy } from "../../src/voice/copy";
 import { TONE_COPY } from "../../src/voice/signals";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   title: string;
@@ -46,7 +47,7 @@ function Body() {
   }, []);
   return (
     <Screen bg={C.ground}>
-      <View style={styles.main}>
+      <ScrollBody contentContainerStyle={[styles.main, { paddingBottom: 24 }]}>
         <PlantLotus width={110} height={76} />
         <Text style={styles.h}>{plain ? copy.titlePlain : copy.title}</Text>
         <Text style={styles.body}>{TONE_COPY}</Text>
@@ -97,7 +98,7 @@ function Body() {
           <Outline label={copy.reflection} ghost onPress={() => router.push("/voice/result" as never)} />
         </View>
         <LockLine>{copy.footer}</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

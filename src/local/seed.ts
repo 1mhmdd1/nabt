@@ -323,11 +323,74 @@ export function buildSeed(): SeedBlob {
     verified: false,
     anonymous: true,
     charter: "A lighter week, one small step at a time.",
-    prompt: "What would make this week lighter?",
-    promptMeta: "Today",
-    memberCount: 11,
+    modLine: "Moderated by a campus counselor · nicknames only",
+    prompt: "One thing that helped you study today?",
+    promptMeta: "Today’s prompt · clears tomorrow",
+    promptFaces: ["P", "F", "J"],
+    memberCount: 5,
+    hereCount: 4,
     order: 6,
   });
+  const examMembers: [string, string, string][] = [
+    ["uid-exam-cedar", "Cedar", "C"],
+    ["uid-exam-olive", "Olive", "O"],
+    ["uid-exam-pine", "Pine", "P"],
+    ["uid-exam-fig", "Fig", "F"],
+    ["uid-exam-jasmine", "Jasmine", "J"],
+  ];
+  examMembers.forEach(([uid, name], index) => member(put, "exam-week", uid, name, index + 1));
+  const morning = Date.now() - 4 * hour;
+  const examAnswers: [string, string, string, string][] = [
+    ["uid-exam-pine", "Pine", "P", "The window seat in Faculty of Engineering."],
+    ["uid-exam-fig", "Fig", "F", "Phone in my bag until the break."],
+    ["uid-exam-jasmine", "Jasmine", "J", "Old exams from the library shelf."],
+  ];
+  examAnswers.forEach(([uid, displayName, initial, text], index) =>
+    put(`circles/exam-week/prompts/today/answers/${uid}`, { authorUid: uid, displayName, initial, text, order: morning + index, day: new Date().toDateString() }),
+  );
+  put("circles/exam-week/threads/hope", {
+    authorUid: "uid-exam-olive",
+    nickname: "Olive",
+    initial: "O",
+    text: "Stuck on the last chapter of Signals. Can’t start.",
+    mode: "Exam mode",
+    when: "1h",
+    createdAt: Date.now() - hour,
+  });
+  put("circles/exam-week/threads/hope/replies/cedar", {
+    authorUid: "uid-exam-cedar",
+    nickname: "Cedar",
+    initial: "C",
+    when: "40m",
+    text: "Summary page only. Ten minutes.",
+    thankedBy: ["uid-exam-olive"],
+    order: 1,
+  });
+  put("circles/exam-week/threads/hope/replies/pine", {
+    authorUid: "uid-exam-pine",
+    nickname: "Pine",
+    initial: "P",
+    when: "25m",
+    text: "Same chapter. Let’s start together.",
+    thankedBy: [],
+    order: 2,
+  });
+  put("circles/exam-week/meetups/quiet-sit", {
+    title: "Propose a meetup",
+    kinds: ["Talk", "Quiet sit", "Short meditation"],
+    selected: "Quiet sit",
+    note: "A counselor approves the campus spot.",
+    approvedLine: "Last time: Quiet sit · Library, 2nd floor · approved",
+  });
+  const examChat: [string, string, string, string, string, string, number][] = [
+    ["m1", "uid-exam-olive", "Olive", "O", "Anyone else stuck on Signals ch. 7?", "text", morning + 1],
+    ["m2", "uid-exam-pine", "Pine", "P", "Same. Summary page, ten minutes, then we compare?", "text", morning + 2],
+    ["m4", "uid-exam-cedar", "Cedar", "C", "I’m in. Library 2nd floor works for me.", "text", morning + 4],
+    ["m5", "uid-exam-jasmine", "Jasmine", "J", "Bringing last year’s exams.", "text", morning + 5],
+  ];
+  examChat.forEach(([id, authorUid, authorNickname, initial, text, kind, createdAt]) =>
+    put(`circles/exam-week/messages/${id}`, { authorUid, authorNickname, initial, text, kind, createdAt }),
+  );
   put("circles/cedar-club", {
     name: "Cedar Club",
     kind: "community",

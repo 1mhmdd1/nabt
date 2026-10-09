@@ -5,6 +5,7 @@ import { BreathRing } from "../src/components/NodeChrome";
 import { Outline, Top } from "../src/components/voice/Kit";
 import { useNabt } from "../src/state";
 import { C, t } from "../src/theme";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 /** Breathing from support and the distress card. Tap the ring to pause. Calm mode keeps it still. */
 export default function Breathe() {
@@ -12,14 +13,16 @@ export default function Breathe() {
   return (
     <Screen bg={C.ground}>
       <Top title="Breathe" />
-      <View style={styles.main}>
-        <BreathRing size={240} />
-        <Text style={styles.guide}>In for 4 · hold for 2 · out for 6</Text>
-        <Text style={styles.sub}>{calm ? "Calm mode is on, so the ring stays still. Follow the count." : "Tap the ring to pause."}</Text>
-      </View>
-      <View style={styles.foot}>
-        <Outline label="I’m done" onPress={() => (router.canGoBack() ? router.back() : router.replace("/home" as never))} />
-      </View>
+      <ScrollBody>
+        <View style={styles.main}>
+          <BreathRing size={240} />
+          <Text style={styles.guide}>In for 4 · hold for 2 · out for 6</Text>
+          <Text style={styles.sub}>{calm ? "Calm mode is on, so the ring stays still. Follow the count." : "Tap the ring to pause."}</Text>
+        </View>
+        <View style={styles.foot}>
+          <Outline label="I’m done" onPress={() => (router.canGoBack() ? router.back() : router.replace("/home" as never))} />
+        </View>
+      </ScrollBody>
     </Screen>
   );
 }

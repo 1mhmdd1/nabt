@@ -5,6 +5,7 @@ import { Screen } from "../../src/components/Chrome";
 import { BackBar } from "../../src/components/NodeChrome";
 import { C, t } from "../../src/theme";
 import { createPetition } from "../../src/live/communities";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 export default function NewPetition() {
   const [title, setTitle] = useState("");
@@ -14,7 +15,7 @@ export default function NewPetition() {
   return (
     <Screen>
       <BackBar title="Start a petition" />
-      <View style={{ paddingHorizontal: 20, gap: 10 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
         <TextInput value={title} onChangeText={setTitle} placeholder="What should change?" placeholderTextColor={C.w64} accessibilityLabel="Petition title" style={field} />
         <TextInput value={line} onChangeText={setLine} placeholder="One line, in your words" placeholderTextColor={C.w64} accessibilityLabel="Petition line" style={field} />
         {note ? <Text>{note}</Text> : null}
@@ -38,7 +39,7 @@ export default function NewPetition() {
         >
           <Text style={[t(700, 15, 18), { color: C.burgundy }]}>Send to Student Affairs</Text>
         </Pressable>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }
