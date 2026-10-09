@@ -140,7 +140,7 @@ export async function seedVoiceSafety(db, Timestamp, morning) {
         okayBody: "This reads tone signals on your phone. It does not detect emotion.",
         lighterBody: "This reads tone signals on your phone. It does not detect emotion. The level stayed steady.",
         suggestions: [
-          { title: "Breathe for two minutes", sub: "In for 4 · out for 6", href: "/n/engineering" },
+          { title: "Breathe for two minutes", sub: "In for 4 · out for 6", href: "/breathe" },
           { title: "Say hi to your Exam Week Circle", sub: "3 people are studying now", href: "/circle/exam-week/chat" },
           { title: "Talk to a counselor", sub: "Anonymous · nickname only", href: "/support" },
         ],

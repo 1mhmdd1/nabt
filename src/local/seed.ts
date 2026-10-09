@@ -1,4 +1,5 @@
 import { DEMO_PASSWORD } from "./mode";
+import { voiceBundle } from "../voice/bundle";
 
 export type SeedAccount = {
   email: string;
@@ -606,6 +607,8 @@ export function buildSeed(): SeedBlob {
     detail: "A counselor opened a name with a written reason.",
     counselor: "Maya Nassar",
   });
+
+  put("voiceSafety/bundle", voiceBundle);
 
   return { day: now.toDateString(), sessionUid: null, accounts, docs };
 }

@@ -66,7 +66,7 @@ function Body() {
               <Text style={[t(700, 13, 16), { color: C.burgundy }]}>Call</Text>
             </View>
           </Pressable>
-          <Pressable style={styles.row} onPress={() => router.push("/n/engineering" as never)}>
+          <Pressable style={styles.row} onPress={() => router.push("/breathe" as never)}>
             <View style={{ flex: 1 }}>
               <Text style={t(600, 15, 18)}>{copy.breatheTitle}</Text>
               <Text style={styles.small}>{copy.breatheSub}</Text>

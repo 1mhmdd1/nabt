@@ -96,7 +96,7 @@ function Body() {
           </Pressable>
         ))}
         <View style={{ marginTop: 14 }}>
-          <Gold label={copy.primary} onPress={() => router.push("/n/engineering" as never)} />
+          <Gold label={copy.primary} onPress={() => router.push("/breathe" as never)} />
         </View>
         <View style={{ marginTop: 8 }}>
           <Outline
