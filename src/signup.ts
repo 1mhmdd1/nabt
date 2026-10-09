@@ -10,7 +10,7 @@ type SignupState = {
   studentId: string;
   faculty: string;
   /** Card reading state for the scan screen. */
-  reading: "idle" | "reading" | "done" | "failed";
+  reading: "idle" | "reading" | "done" | "failed" | "manual";
   /** Demo only: the code the server would have emailed. Shown under the boxes. */
   demoCode: string | null;
   codeSentAt: number;

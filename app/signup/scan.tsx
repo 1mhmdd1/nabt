@@ -7,7 +7,8 @@ import { SvgXml } from "react-native-svg";
 import { SignupScreen } from "../../src/components/Signup";
 import { GoldButton } from "../../src/components/Chrome";
 import { IconLock } from "../../src/components/Icons";
-import { sampleSignup } from "../../src/local/ids";
+import * as FileSystem from "expo-file-system";
+import { readCard, shrinkForUpload } from "../../src/cardReader";
 import { useSignup } from "../../src/signup";
 import { C, t } from "../../src/theme";
 
@@ -57,15 +58,27 @@ export default function Scan() {
     return () => loop.stop();
   }, [sweep]);
 
-  function prefillSample() {
-    useSignup.getState().setRead(sampleSignup(), "done");
+  /** No photo (the web has no camera): open empty fields to type. Nothing is pretended to be read. */
+  function typeInstead() {
+    useSignup.getState().setRead({ fullName: "", studentId: "", faculty: "" }, "manual");
     router.replace("/signup/details" as never);
   }
 
-  async function handleImage(_uri: string) {
+  async function handleImage(uri: string) {
     setPhase("reading");
     useSignup.getState().setReading("reading");
-    prefillSample();
+    let read = { fullName: "", studentId: "", faculty: "", ok: false };
+    try {
+      read = await readCard(await shrinkForUpload(uri));
+    } catch {
+      read.ok = false;
+    } finally {
+      // The photo never stays on the phone.
+      if (!web) void FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+    }
+    const { ok, ...fields } = read;
+    useSignup.getState().setRead(ok ? fields : { fullName: "", studentId: "", faculty: "" }, ok ? "done" : "failed");
+    router.replace("/signup/details" as never);
   }
 
   async function capture() {
@@ -163,7 +176,7 @@ export default function Scan() {
           : note
             ? note
             : web
-              ? "Choose a photo of the front of your card."
+              ? "Choose a photo of the front of your card, or continue to type your details."
               : granted
                 ? "Line the card up, then take the photo."
                 : "Waiting for camera access."}
@@ -171,7 +184,7 @@ export default function Scan() {
 
       <View style={styles.foot}>
         {web ? (
-          <GoldButton label="Continue" onPress={() => prefillSample()} />
+          <GoldButton label="Continue" onPress={() => typeInstead()} />
         ) : (
           <GoldButton label="Take photo" onPress={() => void capture()} />
         )}

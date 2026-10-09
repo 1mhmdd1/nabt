@@ -18,8 +18,9 @@ export default function Details() {
   const setFullName = useSignup((s) => s.setFullName);
   const setStudentId = useSignup((s) => s.setStudentId);
   const failed = reading === "failed";
+  const manual = reading === "manual";
   // When nothing could be read, open the name field for typing straight away.
-  const [edit, setEdit] = useState<"name" | "id" | null>(failed && !fullName ? "name" : null);
+  const [edit, setEdit] = useState<"name" | "id" | null>((failed || manual) && !fullName ? "name" : null);
 
   const nameOk = fullName.trim().length >= 3;
   const idOk = isUaId(studentId);
@@ -51,7 +52,11 @@ export default function Details() {
     <SignupScreen step="2 of 5" onBack={() => router.replace("/signup/scan" as never)}>
       <Text style={styles.h1}>Check your details</Text>
       <Text style={styles.lead}>
-        {failed ? "We couldn’t read the card. Type your name and ID number." : "Read from your card. Fix anything that’s off."}
+        {failed
+          ? "We couldn’t read your card. Type your name and ID number as printed on it."
+          : manual
+            ? "Type your name and ID number as printed on your card."
+            : "Read from your card. Fix anything that’s off."}
       </Text>
       <View style={{ marginTop: 22, gap: 10 }}>
         <Field
@@ -80,7 +85,7 @@ export default function Details() {
           <View style={{ flex: 1 }}>
             <Text style={styles.k}>Role</Text>
             <Text style={styles.v}>Student</Text>
-            <Text style={styles.hint}>{faculty ? `${faculty} · ` : ""}{joined ? `Joined ${joined}. ` : ""}From your ID card. Only the Admin can change roles.</Text>
+            <Text style={styles.hint}>{faculty ? `${faculty} · ` : ""}{joined ? `Joined ${joined}. ` : ""}Only Student Affairs can change your role.</Text>
           </View>
           <IconLock size={16} color={C.w64} />
         </View>

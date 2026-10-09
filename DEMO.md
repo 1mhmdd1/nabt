@@ -60,12 +60,15 @@ Nobody can change their own role, status, alumni flag or class year. The demo st
 15. Switch to `admin`. The audit log and Set a role are on that screen.
 16. Switch to Lara. Settings → Chair dashboard: members, attendance, and Nadine’s join request.
 
-Sign-up stays clickable: New here? Scan your ID card opens the camera (with the torch), and the name and ID stay editable after the scan. The email code is random and shown under the empty boxes.
+Sign-up: New here? Scan your ID card opens the camera (with the torch). The photo is shrunk, sent to the function server’s `/ocr-id` (the one call that leaves the phone in demo mode), read with tesseract.js, and deleted. Check your details shows the printed name (two lines of capitals joined), the 9-digit ID and the UA email that follows it. Faculty stays empty because the cards don’t print one. Name and ID stay editable, and Edited shows only after a change. If the card can’t be read, the fields are empty and the screen says so. On the web, Continue opens empty fields to type. The email code is random and shown under the empty boxes.
+
+For the card read, run the function server on the laptop (`node scripts/dev-fn.mjs`) and set `EXPO_PUBLIC_FN_URL=http://<laptop LAN IP>:5055` in `.env`. The first run downloads the English language file into `.tess-cache/`, so do it once with internet.
 
 ## Checks
 
 ```
 npm run test:permissions
+npm run test:ocr
 CHROME=/path/to/chrome node scripts/demo-walk.mjs
 CHROME=/path/to/chrome node scripts/role-pass.mjs
 ```

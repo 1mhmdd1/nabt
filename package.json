@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
+    "test:ocr": "node --test scripts/ocr-parse.test.mjs",
     "test:permissions": "node --experimental-transform-types --import ./scripts/register-test.mjs --test src/local/permissions.test.ts",
     "test:voice": "node --experimental-strip-types --import ./scripts/register-ts.mjs --test src/moderation/labelled.test.ts src/moderation/outgoing.test.ts src/voice/care.test.ts src/voice/signals.test.ts",
     "demo": "node scripts/demo.mjs",

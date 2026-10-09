@@ -5,7 +5,9 @@
 git fetch origin
 git checkout fix/demo-checklist && git pull
 echo EXPO_PUBLIC_DEMO_LOCAL=1 > .env
+echo EXPO_PUBLIC_FN_URL=http://<laptop LAN IP>:5055 >> .env
 npm install
+node scripts/dev-fn.mjs      # in a second terminal: reads the ID card (needs internet the first time)
 npx expo start
 ```
 Scan the QR code with **Expo Go (SDK 52)**. If the phone can't connect, try `npx expo start --tunnel`.
@@ -19,7 +21,10 @@ Student `202212826` · Chair Lara `202148217` · Alumni Nour `201911457` · Stud
 - [ ] Close the app fully, then open it. THRIVE and the lotus play before the next screen, every launch.
 - [ ] The intro shows only on the first launch (Settings → "Show the intro again" brings it back).
 - [ ] The sign-in screen matches the design: UA ID with a fixed `@ua.edu.lb`, "Send me a sign-in code", no password, no account-type tabs. The code is different each time.
-- [ ] New here? Scan your ID card opens the camera and the torch works. Name and ID stay editable after the scan.
+- [ ] New here? Scan your ID card opens the camera and the torch works.
+- [ ] Photograph a real UA card. Check your details shows the name from the card (first and family name joined), the 9-digit ID, and the email that follows it. No faculty unless one is printed. Never "Lara Haddad".
+- [ ] Name and ID stay editable. "Edited" appears only after you change one.
+- [ ] Photograph something that isn't a card. The fields are empty and the screen says the card couldn't be read.
 
 **Plant (student)**
 - [ ] Soft glow behind the flower; stem sways, the head bends a bit later.

@@ -15,7 +15,8 @@ export function fnUrl() {
  * so the server can tell who is asking. Throws FnError with the server's code and message.
  */
 export async function postFn<T = Record<string, unknown>>(path: string, body: unknown, opts: { timeoutMs?: number } = {}): Promise<T> {
-  if (demoLocal()) {
+  // The card read is the one call that leaves the phone in demo mode: the text reader runs on the function server.
+  if (demoLocal() && path !== "/ocr-id") {
     return handleFn(path, body) as Promise<T>;
   }
   const headers: Record<string, string> = { "content-type": "application/json" };

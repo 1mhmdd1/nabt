@@ -22,12 +22,3 @@ export function joinedLabel(id: string) {
   return year ? `Joined ${year}` : "";
 }
 
-/** Editable sample for the sign-up scan. The year is always the current one. */
-export function sampleSignup() {
-  const year = currentYear();
-  return {
-    fullName: "Lara Haddad",
-    studentId: `${year}48217`,
-    faculty: "Faculty of Engineering",
-  };
-}
