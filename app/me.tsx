@@ -10,6 +10,7 @@ import { C, t } from "../src/theme";
 import { useCampus } from "../src/live";
 import { useNodeRewards } from "../src/live/nodeRewards";
 import { totalsLine, useMyRecord } from "../src/live/records";
+import { demoLocal } from "../src/local/mode";
 
 const budSvg = markSvg.replace('viewBox="100 338 190 132"', 'viewBox="158 338 64 126"');
 
@@ -104,7 +105,10 @@ export default function Me() {
         <View style={styles.list}>
           <Row title="My record" sub={record ? totalsLine(record.totals) : "Events, training, and roles"} onPress={() => router.push("/record" as never)} />
           <Row title="I'd like support" sub="A private request to Student Affairs" onPress={() => router.push("/support/share" as never)} />
-          <Row title="My notes" sub={campus.notesSummary || "Nothing left at a node yet"} onPress={() => router.push("/notes" as never)} />
+          {/* Node notes belong to the Hope Node, which is the next step and not in the demo. */}
+          {demoLocal() ? null : (
+            <Row title="My notes" sub={campus.notesSummary || "Nothing left at a node yet"} onPress={() => router.push("/notes" as never)} />
+          )}
           <Row title="My petitions" sub={campus.petitionsSummary || "None signed yet"} onPress={() => router.push("/petition/new" as never)} />
           <Row title={campus.alumni ? "Offer mentoring" : "I've graduated"} sub={campus.alumni ? "A chat, a CV, or advice" : "Switch this account to alumni"} onPress={() => router.push((campus.alumni ? "/alumni/offer" : "/alumni/graduate") as never)} />
           <Row title="Alumni mentors" sub="Browse alumni" onPress={() => router.push("/alumni" as never)} />
