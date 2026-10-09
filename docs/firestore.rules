@@ -1,0 +1,879 @@
+rules_version = '2';
+// NABT Firestore Security Rules (tested: tests/rules, Firebase emulator).
+// Growth, rewards, cases, reveals and audit are written only by Cloud Functions (Admin SDK bypasses rules).
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ---------- helpers ----------
+    function authed() { return request.auth != null; }
+    function tok() { return request.auth.token; }
+    function approved() { return authed() && tok().status == 'approved'; }
+    function isAdmin() { return authed() && tok().role == 'admin'; }
+    function isSA() { return authed() && tok().sa == true; }
+    function isCounselor() { return isSA() && tok().counselor == true; }
+    function me(uid) { return authed() && request.auth.uid == uid; }
+    function data() { return request.resource.data; }
+    function onlyKeys(keys) { return data().keys().hasOnly(keys); }
+    function changed() { return data().diff(resource.data).affectedKeys(); }
+    function userDoc(uid) { return get(/databases/$(db)/documents/users/$(uid)).data; }
+    function circle(cid) { return get(/databases/$(db)/documents/circles/$(cid)).data; }
+    function memberPath(cid, uid) { return /databases/$(db)/documents/circles/$(cid)/members/$(uid); }
+    function isMember(cid) { return authed() && exists(memberPath(cid, request.auth.uid)); }
+    function myMember(cid) { return get(memberPath(cid, request.auth.uid)).data; }
+    function isChair(cid) { return authed() && circle(cid).get('chairUid', '') == request.auth.uid; }
+    // Board = has at least one role IN THIS circle. Roles never apply outside their own community.
+    function isBoard(cid) { return isMember(cid) && myMember(cid).get('roles', []).size() > 0; }
+    // Hope Node event mode: Chair or a board role of the community that owns the event. Mentors and plain members cannot.
+    function organizes(cid) {
+      return cid is string
+        && exists(/databases/$(db)/documents/circles/$(cid))
+        && (isChair(cid) || (
+          isMember(cid)
+          && myMember(cid).get('roles', []).hasAny(['chair', 'vice_chair', 'events', 'logistics', 'media', 'treasurer', 'moderator', 'hr'])
+        ));
+    }
+    function eventData(eid) { return get(/databases/$(db)/documents/events/$(eid)).data; }
+    function eventWindow(eid, nid) {
+      return eid is string
+        && eid.size() > 0
+        && exists(/databases/$(db)/documents/events/$(eid))
+        && eventData(eid).hostType == 'circle'
+        && eventData(eid).hostId is string
+        && organizes(eventData(eid).hostId)
+        && eventData(eid).venueStatus == 'approved'
+        && eventData(eid).nodeId == nid
+        && eventData(eid).startsAt is timestamp
+        && eventData(eid).endsAt is timestamp
+        && eventData(eid).startsAt <= request.time
+        && eventData(eid).endsAt > request.time;
+    }
+    function hasPriv(cid, p) { return isChair(cid) || (isBoard(cid) && p in myMember(cid).get('privileges', [])); }
+    // Real-identity fields must never be written into public docs.
+    function noIdentity() { return !data().keys().hasAny(['fullName', 'realName', 'idNumber', 'email', 'phone', 'uaEmail']); }
+    // Per-user accessibility settings (users/{uid}/settings/main.accessibility). Text size follows the OS and is not stored.
+    function validA11y(a) {
+      return a is map
+        && a.keys().hasOnly(['calmMode', 'plainLanguage', 'quietPresence', 'nodeTakeYourTime', 'offerTyping', 'updatedAt'])
+        && a.get('calmMode', 'system') in ['system', 'on', 'off']
+        && a.get('plainLanguage', false) is bool
+        && a.get('quietPresence', true) is bool
+        && a.get('nodeTakeYourTime', false) is bool
+        && a.get('offerTyping', true) is bool;
+    }
+
+    // ---------- identity ----------
+    match /users/{uid} {
+      // Public profile = nickname, initial, plant stage, pinned badges. Contains no real identity.
+      allow read: if approved() || me(uid) || isSA() || isAdmin();
+      // Nicknames are normally written by the function server after the full check
+      // (real-name variants, offensive words, uniqueness). A client create still has to
+      // look like a nickname: 3-20 letters and spaces, no digits, links or handles.
+      allow create: if me(uid) && data().status == 'pending' && noIdentity()
+        && !data().keys().hasAny(['role', 'staffRole', 'plant', 'gardenCount', 'communityRoles'])
+        && data().nickname is string
+        && data().nickname.matches('^[\\p{L}][\\p{L} ]{1,18}[\\p{L}]$');
+      allow update: if me(uid) && noIdentity()
+        && !changed().hasAny(['role', 'staffRole', 'status', 'plant', 'gardenCount', 'communityRoles', 'nickname', 'classYear', 'alumni']);
+      allow delete: if false;
+
+      // Settings are owner-only (never SA, Admin or Circles). The accessibility map is whitelisted:
+      // it describes what changes in the app, never who it is for (no diagnosis or condition fields).
+      match /settings/{doc} {
+        allow read, delete: if me(uid);
+        allow create, update: if me(uid)
+          && (!('accessibility' in data()) || validA11y(data().accessibility));
+      }
+      match /privacyLog/{id} { allow read: if me(uid); allow write: if false; }
+      match /garden/{id} { allow read: if approved() || me(uid); allow write: if false; }
+      match /badges/{id} { allow read: if approved() || me(uid); allow write: if false; }
+    }
+
+    // Real name, ID number, UA email, ID photo path. Owner; SA reviewers ONLY while the account is pending; Admin.
+    match /users_private/{uid} {
+      allow read: if me(uid) || isAdmin() || (isSA() && userDoc(uid).status != 'approved');
+      allow create: if me(uid);
+      allow update: if me(uid) && userDoc(uid).status == 'pending' && !changed().hasAny(['reviewedBy', 'reviewNote']);
+      allow delete: if false;
+    }
+
+    match /loginCodes/{id} { allow read, write: if false; }
+    // One document per taken nickname (key = letters only, lower case). Server-only writes.
+    match /nicknames/{key} { allow read: if authed(); allow write: if false; }
+
+    // ---------- Circles and verified communities ----------
+    match /circles/{cid} {
+      // Circle doc holds counts only (name, memberCount, chairUid…). SA sees this, never members or content.
+      allow read: if authed();
+      allow create, delete: if false; // created by the function server
+      // Joining moves the count by one, and only while you are a member.
+      allow update: if approved() && isMember(cid)
+        && changed().hasOnly(['memberCount'])
+        && data().memberCount is number
+        && (data().memberCount == resource.data.memberCount + 1
+          || data().memberCount == resource.data.memberCount - 1);
+
+      // Membership: nickname + roles (≤2) + privileges. Readable by fellow members only.
+      match /members/{uid} {
+        allow read: if isMember(cid) || me(uid);
+        // Approval communities do not take a direct join. The function server writes the member after the Chair says yes.
+        allow create: if approved() && me(uid) && noIdentity()
+          && onlyKeys(['nickname', 'joinedAt'])
+          && circle(cid).get('joinApproval', false) != true;
+        allow delete: if me(uid);
+        allow update: if false; // roles/privileges via Function (Chair, ≤2 roles, audited)
+      }
+      match /joinRequests/{uid} {
+        allow read: if me(uid) || isChair(cid) || hasPriv(cid, 'members');
+        allow create: if approved() && me(uid)
+          && circle(cid).get('joinApproval', false) == true
+          && data().status == 'pending'
+          && onlyKeys(['nickname', 'realName', 'uaEmail', 'phone', 'trainingAttendance', 'status', 'at'])
+          && data().nickname is string && data().nickname.size() > 0 && data().nickname.size() <= 40
+          && data().realName is string && data().realName.size() <= 80
+          && data().uaEmail is string && data().uaEmail.size() <= 80
+          && data().phone is string && data().phone.size() <= 40
+          && data().at == request.time;
+        allow update: if (isChair(cid) || hasPriv(cid, 'members'))
+          && resource.data.status == 'pending'
+          && changed().hasOnly(['status'])
+          && data().status in ['approved', 'declined'];
+        allow delete: if me(uid) && resource.data.status == 'pending';
+      }
+      // Join-notice contact (verified communities only): name, UA email, phone, training attendance.
+      // Visible to the member, the Chair, and board members holding the 'members' privilege OF THIS community.
+      match /contacts/{uid} {
+        allow read: if me(uid) || hasPriv(cid, 'members');
+        allow create: if approved() && me(uid) && circle(cid).get('verified', false) == true
+          && onlyKeys(['realName', 'uaEmail', 'phone', 'trainingAttendance', 'consentAt']);
+        allow delete: if me(uid);
+        allow update: if me(uid) && onlyKeys(['realName', 'uaEmail', 'phone', 'trainingAttendance', 'consentAt']);
+      }
+      match /messages/{mid} {
+        allow read: if isMember(cid);
+        allow create: if approved() && isMember(cid) && data().authorUid == request.auth.uid && noIdentity()
+          && onlyKeys(['authorUid', 'authorNickname', 'text', 'kind', 'media', 'poll', 'createdAt', 'kindness', 'replyTo'])
+          && data().kind in ['text', 'system', 'media', 'day']
+          && (data().kind != 'text' && data().kind != 'system' || (data().text is string && data().text.size() > 0 && data().text.size() <= 500))
+          && (!('kindness' in data()) || data().kindness is bool)
+          && (!('replyTo' in data()) || data().replyTo is string)
+          && (data().kind != 'media' || circle(cid).anonymous == false);
+        // Other members close the kindness card after they reply. The sender never writes this.
+        allow update: if approved() && isMember(cid)
+          && resource.data.authorUid != request.auth.uid
+          && resource.data.kindness == true
+          && changed().hasOnly(['kindnessClosed'])
+          && data().kindnessClosed == true;
+        allow delete: if false;
+        match /thanks/{uid} {
+          allow read: if isMember(cid);
+          allow create: if approved() && isMember(cid) && me(uid)
+            && onlyKeys(['at'])
+            && data().at == request.time
+            && get(/databases/$(db)/documents/circles/$(cid)/messages/$(mid)).data.authorUid != request.auth.uid;
+          allow delete: if me(uid) && isMember(cid);
+          allow update: if false;
+        }
+      }
+      match /threads/{tid} {
+        allow read: if isMember(cid);
+        allow create: if approved() && isMember(cid) && data().authorUid == request.auth.uid && noIdentity()
+          && data().text is string && data().text.size() > 0 && data().text.size() <= 500;
+        match /replies/{rid} {
+          allow read: if isMember(cid);
+          allow create: if approved() && isMember(cid) && data().authorUid == request.auth.uid && noIdentity()
+            && data().text is string && data().text.size() > 0 && data().text.size() <= 500;
+          allow update, delete: if false;
+          match /thanks/{uid} {
+            allow read: if isMember(cid);
+            allow create: if approved() && isMember(cid) && me(uid)
+              && onlyKeys(['at'])
+              && data().at == request.time
+              && get(/databases/$(db)/documents/circles/$(cid)/threads/$(tid)/replies/$(rid)).data.authorUid != request.auth.uid;
+            allow delete: if me(uid) && isMember(cid);
+            allow update: if false;
+          }
+        }
+      }
+      match /prompts/{d}/answers/{uid} {
+        allow read: if isMember(cid);
+        allow create, update: if approved() && isMember(cid) && me(uid) && noIdentity()
+          && data().text is string && data().text.size() > 0 && data().text.size() <= 200;
+      }
+      match /meetups/{m} {
+        allow read: if isMember(cid) || isCounselor();
+        allow create: if approved() && isMember(cid) && data().proposedBy == request.auth.uid;
+        allow update: if isCounselor() && changed().hasOnly(['status', 'spot', 'approvedBy']);
+      }
+      // Private board channel: Chair + board of THIS community only.
+      match /board/{doc=**} {
+        allow read: if isChair(cid) || isBoard(cid);
+        allow create: if isChair(cid) || isBoard(cid);
+        allow update, delete: if false; // ledger approvals (2 distinct board members) + deletions via Function
+      }
+      match /audit/{id} { allow read: if isMember(cid); allow write: if false; }
+      match /reviewRequests/{id} { allow create: if approved() && isMember(cid); allow read: if isSA(); }
+    }
+
+    // Requests to Student Affairs: Chair only, venue + date only.
+    match /venueRequests/{r} {
+      allow read: if isSA() || (authed() && resource.data.chairUid == request.auth.uid);
+      allow create: if approved() && data().chairUid == request.auth.uid && isChair(data().circleId)
+        && onlyKeys(['circleId', 'chairUid', 'venueId', 'dateOptions', 'memberCount', 'status', 'createdAt'])
+        && data().dateOptions is list && data().dateOptions.size() >= 1 && data().dateOptions.size() <= 3
+        && data().status == 'sent';
+      allow update: if isSA() && changed().hasOnly(['status', 'updatedAt']);
+      allow delete: if false;
+      match /thread/{m} {
+        allow read: if isSA() || get(/databases/$(db)/documents/venueRequests/$(r)).data.chairUid == request.auth.uid;
+        allow create: if isSA() || get(/databases/$(db)/documents/venueRequests/$(r)).data.chairUid == request.auth.uid;
+      }
+    }
+
+    // ---------- 1:1 chats ----------
+    match /chats/{chatId} {
+      function chat() { return get(/databases/$(db)/documents/chats/$(chatId)).data; }
+      function inChat() { return authed() && request.auth.uid in chat().members; }
+      allow read: if authed() && request.auth.uid in resource.data.members;
+      allow create, delete: if false; // created by Functions on request accept (alumni chats always anonymous=false)
+      // A member may only flip their OWN name share. Nobody can change 'anonymous' or 'type' from the client.
+      allow update: if authed() && request.auth.uid in resource.data.members
+        && changed().hasOnly(['nameShares'])
+        && data().nameShares.diff(resource.data.nameShares).affectedKeys().hasOnly([request.auth.uid]);
+      match /messages/{mid} {
+        allow read: if inChat();
+        allow create: if approved() && inChat() && data().authorUid == request.auth.uid
+          && onlyKeys(['authorUid', 'authorNickname', 'text', 'kind', 'media', 'createdAt', 'kindness', 'replyTo'])
+          && data().kind in ['text', 'system', 'media', 'day']
+          && (data().kind != 'text' && data().kind != 'system' || (data().text is string && data().text.size() > 0 && data().text.size() <= 500))
+          && (!('kindness' in data()) || data().kindness is bool)
+          && (!('replyTo' in data()) || data().replyTo is string)
+          && (data().kind != 'media' || chat().anonymous == false);
+        allow update: if approved() && inChat()
+          && resource.data.authorUid != request.auth.uid
+          && resource.data.kindness == true
+          && changed().hasOnly(['kindnessClosed'])
+          && data().kindnessClosed == true;
+        allow delete: if false;
+      }
+    }
+    match /chatRequests/{id} {
+      allow read: if authed() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if approved() && data().fromUid == request.auth.uid && data().status == 'pending'
+        && (data().type != 'alumni' || (data().intro is string && data().intro.size() <= 300));
+      allow update: if authed() && resource.data.toUid == request.auth.uid && changed().hasOnly(['status'])
+        && data().status in ['accepted', 'declined'];
+    }
+    match /alumniAsks/{id} {
+      allow read: if approved();
+      allow create: if approved() && data().askerUid == request.auth.uid && data().question.size() <= 200 && noIdentity();
+      allow update: if approved() && tok().role == 'alumni' && changed().hasOnly(['answer', 'alumUid', 'answeredAt', 'status']);
+    }
+
+    // ---------- Hope Nodes ----------
+    match /nodes/{nid} {
+      allow read: if approved() || isSA() || isAdmin();
+      allow create, delete: if isAdmin() || isCounselor();
+      // Event mode is a narrow update. Students never write it. The count moves by one when a member arrives.
+      allow update: if isAdmin() || isCounselor()
+        || (data().get('eventId', '') is string
+          && eventWindow(data().get('eventId', ''), nid)
+          && data().get('mode', '') == 'event'
+          && data().get('eventTitle', '') == eventData(data().get('eventId', '')).title
+          && data().startsAt == eventData(data().get('eventId', '')).startsAt
+          && data().endsAt == eventData(data().get('eventId', '')).endsAt
+          && data().get('presentCount', 0) == resource.data.get('presentCount', 0)
+          && changed().hasOnly(['mode', 'eventId', 'eventTitle', 'startsAt', 'endsAt']))
+        || (resource.data.get('mode', '') == 'event'
+          && resource.data.eventId is string
+          && exists(/databases/$(db)/documents/events/$(resource.data.eventId))
+          && organizes(eventData(resource.data.eventId).hostId)
+          && data().mode == 'normal'
+          && data().eventId == ''
+          && data().eventTitle == ''
+          && changed().hasOnly(['mode', 'eventId', 'eventTitle']))
+        || (resource.data.get('mode', '') == 'event'
+          && resource.data.eventId is string
+          && resource.data.endsAt is timestamp
+          && resource.data.endsAt > request.time
+          && exists(/databases/$(db)/documents/events/$(resource.data.eventId))
+          && eventData(resource.data.eventId).hostId is string
+          && isMember(eventData(resource.data.eventId).hostId)
+          && changed().hasOnly(['presentCount'])
+          && data().presentCount == resource.data.presentCount + 1
+          && !exists(/databases/$(db)/documents/events/$(resource.data.eventId)/attendance/$(request.auth.uid)));
+      match /notes/{noteId} {
+        allow read: if (approved() && resource.data.status == 'approved') || (authed() && resource.data.authorUid == request.auth.uid) || isSA();
+        allow create: if approved() && data().authorUid == request.auth.uid && data().status == 'held'
+          && data().text.size() <= 80 && noIdentity();
+        allow update: if isSA() && changed().hasOnly(['status']);
+      }
+      match /live/{d} { allow read: if true; allow write: if false; }
+      match /drops/{d} { allow read: if approved(); allow write: if isAdmin(); }
+      match /rsvps/{uid} {
+        allow read: if approved() && (me(uid) || isSA());
+        allow create, update: if approved() && me(uid)
+          && onlyKeys(['going', 'remind', 'at'])
+          && data().going is bool
+          && data().remind is bool;
+        allow delete: if me(uid);
+      }
+    }
+    match /checkins/{id} { allow read: if authed() && resource.data.uid == request.auth.uid; allow write: if false; }
+
+    // ---------- Events, petitions ----------
+    match /events/{eid} {
+      allow read: if approved() || isSA();
+      // Staff publish the event. The short tablet line is a separate write: only the host Circle's Chair or board.
+      allow create: if isSA() && !data().keys().hasAny(['screenDescription']);
+      allow delete: if isSA();
+      allow update: if (isSA() && !changed().hasAny(['screenDescription']))
+        || (approved()
+          && resource.data.hostType == 'circle'
+          && resource.data.hostId is string
+          && organizes(resource.data.hostId)
+          && changed().hasOnly(['screenDescription'])
+          && data().screenDescription is string
+          && data().screenDescription.size() <= 90
+          && noIdentity());
+      match /rsvps/{uid} { allow read: if approved() || isSA(); allow write: if approved() && me(uid) && noIdentity(); }
+      // Community event check-in. A signed-in member marks only themselves, once.
+      // Chair and board of the host Circle read the list. Staff and other students cannot.
+      // Hope Node event mode still uses this row to keep its live count honest.
+      match /attendance/{uid} {
+        allow read: if approved()
+          && exists(/databases/$(db)/documents/events/$(eid))
+          && eventData(eid).hostId is string
+          && organizes(eventData(eid).hostId);
+        allow update, delete: if false;
+        allow create: if approved() && me(uid)
+          && exists(/databases/$(db)/documents/events/$(eid))
+          && eventData(eid).hostType == 'circle'
+          && eventData(eid).hostId is string
+          && isMember(eventData(eid).hostId)
+          && onlyKeys(['uid', 'nickname', 'at'])
+          && data().uid == request.auth.uid
+          && data().nickname is string
+          && data().nickname.size() > 0
+          && data().nickname.size() <= 40
+          && data().at == request.time
+          && noIdentity();
+      }
+      match /pulse/{uid} { allow create: if approved() && me(uid); allow read: if false; }
+    }
+    // Private accommodation requests for an event (25f-25h). The student creates and reads their own;
+    // only Student Affairs staff read and mark them arranged. The host Circle's Chair/board never read them.
+    // No reason or diagnosis field is accepted. deleteAt (event end + 30 days) is set by a Function, and a
+    // scheduled Function hard-deletes the doc then. Clients can never delete or extend it.
+    match /accommodations/{aid} {
+      function needsOk(n) { return n is list && n.size() >= 1 && n.size() <= 5
+        && n.hasOnly(['seat_near_exit', 'quiet_space', 'captions', 'extra_time', 'other']); }
+      allow read: if (authed() && resource.data.uid == request.auth.uid) || isSA();
+      allow create: if approved() && data().uid == request.auth.uid && noIdentity()
+        && onlyKeys(['uid', 'nickname', 'eventId', 'needs', 'note', 'status', 'createdAt'])
+        && needsOk(data().needs)
+        && data().get('note', '') is string && data().get('note', '').size() <= 140
+        && data().status == 'requested'
+        && data().createdAt == request.time
+        && exists(/databases/$(db)/documents/events/$(data().eventId));
+      allow update: if isSA() && changed().hasOnly(['status', 'arrangedBy', 'arrangedAt'])
+        && data().status in ['requested', 'arranged']
+        && data().arrangedBy == request.auth.uid;
+      allow delete: if false; // hard delete only by the scheduled Function (Admin SDK), 30 days after the event
+    }
+    match /venues/{v} { allow read: if approved() || isSA(); allow write: if isSA(); }
+    match /petitions/{p} {
+      allow read: if (approved() && resource.data.status in ['published', 'answered', 'closed']) || isSA();
+      allow create: if false; // via Function: author kept in petitionAuthors (Functions only)
+      allow update: if isSA() && changed().hasOnly(['status', 'response', 'respondedAt']);
+      match /signatures/{uid} { allow read, write: if false; }
+    }
+    match /petitionAuthors/{p} { allow read, write: if false; }
+
+    // ---------- Safety ----------
+    // Anonymous safety signal from the phone: severity + category + context + anonymous ID + time. No uid, no text.
+    match /safetySignals/{s} {
+      allow create: if approved()
+        && onlyKeys(['severity', 'category', 'context', 'anonId', 'campus', 'at'])
+        && data().severity in ['needs_attention', 'concerning', 'serious', 'immediate_danger']
+        && data().anonId != request.auth.uid;
+      allow read, update, delete: if false; // SA sees aggregates via Function
+    }
+    // Care signal from the phone: level WORD + plain counts + softer steps done. No score, no text, no audio.
+    match /careSignals/{s} {
+      allow create: if approved() && data().uid == request.auth.uid
+        && onlyKeys(['uid', 'level', 'counts', 'stepsDone', 'at'])
+        && data().level in ['gentle_watch', 'needs_care', 'reach_out_now']
+        && data().counts is map && data().counts.keys().hasOnly(['heavyCheckins', 'declinedSupport', 'lowVoice'])
+        && data().stepsDone is list;
+      allow read, update, delete: if false; // a Function opens a case with the nickname only
+    }
+    // Message shared BY THE STUDENT (the only time message text leaves the phone).
+    match /sharedItems/{id} {
+      allow create: if approved() && data().uid == request.auth.uid && data().consent == true
+        && !data().keys().hasAny(['messages', 'quote', 'chatId', 'thread']);
+      allow read, update, delete: if false; // Function copies into the case and logs each SA view
+    }
+    // I'd like support. A reason, an optional note, and how to be reached. Never a chat message.
+    match /supportRequests/{id} {
+      allow create: if approved() && data().uid == request.auth.uid
+        && onlyKeys(['uid', 'reason', 'note', 'contact', 'nickname', 'shownName', 'status', 'at'])
+        && data().reason in ['stress', 'down', 'happened', 'talk']
+        && data().note is string && data().note.size() <= 200
+        && data().contact in ['anonymous', 'name']
+        && data().nickname is string && data().nickname.size() <= 40
+        && data().shownName is string && data().shownName.size() <= 80
+        && (data().contact == 'name' || data().shownName == '')
+        && data().status == 'open'
+        && data().at == request.time
+        && noIdentity();
+      allow read: if isCounselor() || (authed() && resource.data.uid == request.auth.uid);
+      allow update: if isCounselor() && changed().hasOnly(['status', 'chatId']);
+      allow delete: if false;
+    }
+    match /reports/{r} {
+      allow create: if approved() && data().reporterUid == request.auth.uid;
+      allow read: if isSA();
+      allow update, delete: if false;
+    }
+    match /blocks/{id} {
+      allow read: if authed() && resource.data.uid == request.auth.uid;
+      allow create: if approved() && data().uid == request.auth.uid
+        && data().blockedUid is string
+        && data().blockedUid != request.auth.uid
+        && onlyKeys(['uid', 'blockedUid', 'at', 'circleId', 'messageId'])
+        && data().at == request.time;
+      allow delete: if authed() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+    match /cases/{c} {
+      allow read: if isCounselor();
+      allow write: if false;
+      match /thread/{m} {
+        allow read: if isCounselor();
+        allow create: if isCounselor() && data().from == 'counselor';
+      }
+    }
+    match /casesPrivate/{c} { allow read, write: if false; }
+    // Last-resort reveal: a counselor files a request with a serious reason + note ≥30 + confirm.
+    // A Function performs it and writes reveals + the student's privacyLog + auditLogs.
+    match /revealRequests/{id} {
+      allow create: if isCounselor() && data().counselorUid == request.auth.uid
+        && onlyKeys(['caseId', 'counselorUid', 'reason', 'note', 'confirm', 'at'])
+        && data().reason in ['danger_to_self', 'danger_to_others', 'legal_requirement', 'other']
+        && data().note is string && data().note.size() >= 30
+        && data().confirm == true;
+      allow read: if isAdmin() || (isCounselor() && resource.data.counselorUid == request.auth.uid);
+      allow update, delete: if false;
+    }
+    match /revealResults/{id} { allow read: if isCounselor() && resource.data.counselorUid == request.auth.uid; allow write: if false; }
+    match /reveals/{r} { allow read: if isAdmin(); allow write: if false; }
+    match /auditLogs/{a} { allow read: if isAdmin(); allow write: if false; }
+
+    // ---------- rewards (Functions only) ----------
+    match /growthEvents/{id} { allow read: if authed() && resource.data.uid == request.auth.uid; allow write: if false; }
+    match /redemptions/{id} { allow read: if authed() && resource.data.uid == request.auth.uid; allow write: if false; }
+    // Certificates moved to AREA: records. Owner read; Chair or board create for their own event.
+
+    // ---------- config ----------
+    match /microActions/{id} { allow read: if authed(); allow write: if isAdmin(); }
+    match /dailyPrompts/{id} { allow read: if approved(); allow write: if isAdmin(); }
+    match /badges/{id} { allow read: if approved(); allow write: if isAdmin(); }
+    match /campaigns/{id} { allow read: if approved(); allow write: if isAdmin(); }
+    match /config/{id} { allow read: if authed(); allow write: if isAdmin(); }
+    match /perks/{id} { allow read: if approved() || isSA(); allow write: if isSA(); }
+    match /campusGoal/{id} { allow read: if approved() || isSA(); allow write: if isSA(); }
+    match /stories/{id} { allow read: if approved(); allow write: if false; }
+
+    // AREA: voice-safety-a11y
+    // Screen copy is seeded. The care inbox is the student's own view of anonymous outreach.
+    // Identity share is a consent flag only — the client cannot write a name.
+    match /voiceSafety/{docId} {
+      allow read: if approved() || isSA() || isCounselor();
+      allow write: if false;
+    }
+    match /careInbox/{uid}/messages/{mid} {
+      allow read: if me(uid) || isCounselor();
+      allow create: if me(uid)
+        && onlyKeys(['from', 'text', 'at'])
+        && data().from == 'student'
+        && data().text is string
+        && data().text.size() > 0
+        && data().text.size() <= 500
+        && data().at == request.time
+        && noIdentity();
+      allow update, delete: if false;
+    }
+    match /identityShares/{id} {
+      allow create: if approved()
+        && data().uid == request.auth.uid
+        && data().consent == true
+        && onlyKeys(['uid', 'consent', 'at'])
+        && data().at == request.time;
+      allow read, update, delete: if false;
+    }
+
+    // AREA: staff
+    // Student Affairs staff app. Aggregates have no uid and no message text.
+    // Last-resort reveal still files revealRequests (above). A Function — not the client —
+    // writes reveals, auditLogs (Admin log) and users/{uid}/privacyLog.
+    match /wellbeingTrends/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /staffOverview/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /staffProfile/{uid} {
+      allow read: if isSA() && (me(uid) || isAdmin());
+      allow update: if isSA() && me(uid) && changed().hasOnly(['onCall']) && data().onCall is bool;
+      allow create, delete: if false;
+      match /reveals/{id} {
+        allow read: if isCounselor() && me(uid);
+        allow write: if false;
+      }
+    }
+    match /heldItems/{id} {
+      allow read: if isSA();
+      allow update: if isSA() && changed().hasOnly(['status', 'updatedAt'])
+        && data().status in ['held', 'released', 'removed'];
+      allow create, delete: if false;
+    }
+    match /accountQueue/{id} {
+      allow read: if isSA();
+      allow update: if isSA() && changed().hasOnly(['status', 'chip', 'reviewedBy', 'updatedAt'])
+        && data().status in ['pending', 'approved', 'rejected', 'new_photo'];
+      allow create, delete: if false;
+    }
+    match /accountDecisions/{id} {
+      allow read: if isSA() || isAdmin();
+      allow create: if isSA()
+        && data().reviewerUid == request.auth.uid
+        && onlyKeys(['uid', 'reviewerUid', 'decision', 'at'])
+        && data().uid is string
+        && data().uid != request.auth.uid
+        && data().decision in ['approve', 'reject', 'new_photo'];
+      allow update, delete: if false;
+    }
+    match /staffMeetups/{id} {
+      allow read: if isSA();
+      allow update: if isCounselor() && changed().hasOnly(['status', 'spot', 'approvedBy'])
+        && data().status in ['proposed', 'approved', 'declined'];
+      allow create, delete: if false;
+    }
+    match /staffSpots/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /communityReviews/{id} {
+      allow read: if isSA();
+      allow update: if isSA() && changed().hasOnly(['status', 'reviewedBy', 'updatedAt'])
+        && data().status in ['waiting', 'verified', 'changes', 'declined'];
+      allow create, delete: if false;
+    }
+    match /staffCommunities/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /chairChanges/{id} {
+      allow read: if isSA() || isAdmin();
+      allow create: if isSA()
+        && data().byUid == request.auth.uid
+        && onlyKeys(['circleId', 'byUid', 'fromChair', 'toChair', 'toName', 'reason', 'at'])
+        && data().reason in ['new_semester', 'stepped_down', 'graduated', 'other']
+        && data().circleId is string
+        && data().toChair is string
+        && data().toName is string;
+      allow update, delete: if false;
+    }
+    match /staffSchedule/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /staffPerks/{id} {
+      allow read: if isSA();
+      allow create: if isSA() && noIdentity()
+        && onlyKeys(['title', 'cost', 'detail', 'status', 'order']);
+      allow update, delete: if false;
+    }
+    match /staffCertificates/{id} {
+      allow read: if isSA();
+      allow update: if isSA() && changed().hasOnly(['verified', 'verifiedBy']) && data().verified is bool;
+      allow create, delete: if false;
+    }
+    match /staffLive/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /staffInsights/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+
+    // AREA: node-rewards
+    // Private note copies, the badge shelf, dedications and the bloom catalog.
+    // Clients never write plant, garden, earned badges, dedications, redemptions or check-ins.
+    match /dedications/{id} {
+      allow read: if approved();
+      allow write: if false;
+    }
+    match /users/{uid}/nodeNotes/{noteId} {
+      allow read: if me(uid);
+      allow write: if false;
+    }
+    match /users/{uid}/earned/{badgeId} {
+      allow read: if me(uid);
+      allow write: if false;
+    }
+    match /users/{uid}/drafts/{id} {
+      allow read: if me(uid);
+      allow create, update: if me(uid) && noIdentity()
+        && data().keys().hasOnly(['text', 'updatedAt'])
+        && data().text is string && data().text.size() <= 80;
+      allow delete: if me(uid);
+    }
+    match /nfcStickers/{id} {
+      allow read, write: if false;
+    }
+    match /blooms/{doc=**} {
+      allow read: if approved();
+      allow write: if false;
+    }
+
+    // AREA: records
+    // Student Affairs impact (m3-sa-impact) reads only the two aggregate collections. They have no uid.
+    // feedbackAggregates/{eventId}: eventId, eventTitle, circleId, circleName, count, sum, average,
+    //   distribution {"1","2","3","4","5"}, comments (strings, no names), updatedAt
+    // certificateAggregates/{eventId}: eventId, eventTitle, circleId, circleName, semester,
+    //   issued, byRole {attendee, mentor, board, organizer}, updatedAt
+    // Private to the student: records/{uid}. Certificates are owner-read.
+    // certificatePublic/{code} is the public check: fullName, eventTitle, dateLabel, valid.
+    // events/{eid}/feedback/{uid} is one write by that attendee. Organizers never read it.
+    match /records/{uid} {
+      allow read: if me(uid);
+      allow write: if false;
+    }
+    match /certificates/{id} {
+      allow read: if authed() && resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+      allow create: if approved()
+        && onlyKeys(['uid', 'code', 'fullName', 'eventId', 'eventTitle', 'circleId', 'circleName', 'role', 'dateLabel', 'semester', 'kind', 'issuedAt'])
+        && data().eventId is string
+        && exists(/databases/$(db)/documents/events/$(data().eventId))
+        && eventData(data().eventId).hostType == 'circle'
+        && eventData(data().eventId).hostId == data().circleId
+        && organizes(data().circleId)
+        && data().uid is string
+        && exists(/databases/$(db)/documents/events/$(data().eventId)/attendance/$(data().uid))
+        && data().role in ['attendee', 'mentor', 'board', 'organizer']
+        && data().kind in ['event', 'training', 'mentoring', 'board']
+        && data().code is string && data().code.size() >= 4 && data().code.size() <= 16
+        && data().fullName is string && data().fullName.size() > 0 && data().fullName.size() <= 80
+        && data().eventTitle is string && data().circleName is string
+        && data().dateLabel is string && data().semester is string
+        && data().issuedAt == request.time;
+    }
+    match /certificatePublic/{code} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /events/{eid}/feedback/{uid} {
+      allow read: if me(uid);
+      allow update, delete: if false;
+      allow create: if approved() && me(uid)
+        && exists(/databases/$(db)/documents/events/$(eid))
+        && exists(/databases/$(db)/documents/events/$(eid)/attendance/$(uid))
+        && eventData(eid).endsAt is timestamp
+        && eventData(eid).endsAt < request.time
+        && onlyKeys(['uid', 'rating', 'comment', 'at'])
+        && data().uid == uid
+        && data().rating in [1, 2, 3, 4, 5]
+        && data().comment is string
+        && data().comment.size() <= 200
+        && data().at == request.time
+        && noIdentity();
+    }
+    match /feedbackAggregates/{eventId} {
+      allow read: if isSA() || (
+        exists(/databases/$(db)/documents/events/$(eventId))
+        && eventData(eventId).hostId is string
+        && organizes(eventData(eventId).hostId)
+      );
+      allow write: if false;
+    }
+    match /certificateAggregates/{eventId} {
+      allow read: if isSA() || (
+        exists(/databases/$(db)/documents/events/$(eventId))
+        && eventData(eventId).hostId is string
+        && organizes(eventData(eventId).hostId)
+      );
+      allow write: if false;
+    }
+
+    // AREA: alumni
+    // A confirmed graduate keeps records and Circle membership. The client cannot set role, classYear, or alumni.
+    // alumniMentors/{uid} is opt-in and named. mentorRequests/{id} is visible only to the two people.
+    // An accepted request opens chats/{id} from the function (clients cannot create chats).
+    match /alumniMentors/{uid} {
+      allow read: if approved();
+      allow create: if approved() && tok().role == 'alumni' && me(uid)
+        && onlyKeys(['uid', 'fullName', 'field', 'line', 'offers', 'initial', 'classYear'])
+        && data().uid == uid
+        && data().fullName is string && data().fullName.size() > 0 && data().fullName.size() <= 80
+        && data().field is string && data().field.size() > 0 && data().field.size() <= 40
+        && data().line is string && data().line.size() <= 140
+        && data().offers is list && data().offers.size() >= 1 && data().offers.size() <= 3
+        && data().offers.hasOnly(['chat', 'cv', 'advice'])
+        && data().initial is string && data().initial.size() == 1
+        && data().classYear is int;
+      allow update: if approved() && tok().role == 'alumni' && me(uid)
+        && changed().hasOnly(['fullName', 'field', 'line', 'offers']);
+      allow delete: if false;
+    }
+    match /mentorRequests/{id} {
+      allow read: if authed() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if approved() && data().fromUid == request.auth.uid
+        && data().status == 'pending'
+        && data().toUid is string
+        && data().toUid != request.auth.uid
+        && exists(/databases/$(db)/documents/alumniMentors/$(data().toUid))
+        && onlyKeys(['fromUid', 'toUid', 'fromName', 'toName', 'message', 'status', 'createdAt'])
+        && data().fromName is string && data().toName is string
+        && data().message is string && data().message.size() > 0 && data().message.size() <= 200
+        && data().createdAt == request.time
+        && noIdentity();
+      allow update: if authed() && resource.data.toUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && changed().hasOnly(['status'])
+        && data().status in ['accepted', 'declined'];
+      allow delete: if false;
+    }
+
+    // AREA: impact
+    // Semester rollup, official announcements, Circle activity reports, and
+    // "You said, we did". Aggregates have counts and community names only.
+    function impactAudienceOk() {
+      return (data().audience == 'everyone'
+          && data().audienceKey == 'everyone'
+          && data().get('faculty', '') == ''
+          && data().get('circleId', '') == '')
+        || (data().audience == 'faculty'
+          && data().faculty is string
+          && data().faculty.size() > 0
+          && data().faculty.size() <= 80
+          && data().audienceKey == 'faculty:' + data().faculty)
+        || (data().audience == 'circle'
+          && data().circleId is string
+          && data().circleId.size() > 0
+          && data().audienceKey == 'circle:' + data().circleId);
+    }
+    match /impact/{id} {
+      allow read: if isSA();
+      allow write: if false;
+    }
+    match /circleStats/{cid} {
+      allow read: if isSA() || isChair(cid) || isBoard(cid);
+      allow write: if false;
+    }
+    match /announcements/{id} {
+      allow read: if isSA() || (
+        approved() && (
+          resource.data.audienceKey == 'everyone'
+          || (resource.data.audience == 'faculty'
+            && resource.data.faculty == userDoc(request.auth.uid).get('faculty', '')
+            && resource.data.audienceKey == 'faculty:' + resource.data.faculty)
+          || (resource.data.audience == 'circle'
+            && resource.data.audienceKey == 'circle:' + resource.data.circleId
+            && isMember(resource.data.circleId))
+        )
+      );
+      allow create: if approved()
+        && data().authorUid == request.auth.uid
+        && data().status == 'published'
+        && data().createdAt == request.time
+        && data().title is string && data().title.size() > 0 && data().title.size() <= 80
+        && data().body is string && data().body.size() > 0 && data().body.size() <= 280
+        && (!('link' in data()) || (data().link is string && data().link.size() <= 200))
+        && (!('eventDate' in data()) || (data().eventDate is string && data().eventDate.size() <= 40))
+        && (!('pinUntil' in data()) || data().pinUntil is timestamp)
+        && noIdentity()
+        && impactAudienceOk()
+        && data().keys().hasOnly(['title', 'body', 'link', 'eventDate', 'audience', 'faculty', 'circleId', 'audienceKey', 'pinUntil', 'authorUid', 'verified', 'status', 'createdAt'])
+        && (
+          (isSA() && data().verified == true && data().audience in ['everyone', 'faculty'])
+          || (data().audience == 'circle' && data().verified == false && isChair(data().circleId))
+        );
+      allow update, delete: if false;
+    }
+    match /users/{uid}/announcementHides/{id} {
+      allow read, delete: if me(uid);
+      allow create: if me(uid) && data().keys().hasOnly(['at']) && data().at == request.time;
+      allow update: if false;
+    }
+    match /activityReports/{id} {
+      allow read: if isSA() || isChair(resource.data.circleId) || isBoard(resource.data.circleId);
+      allow create: if approved()
+        && (isChair(data().circleId) || isBoard(data().circleId))
+        && data().authorUid == request.auth.uid
+        && data().status == 'draft'
+        && data().circleId is string
+        && data().circleName is string
+        && data().semester is string
+        && data().eventsHeld is number
+        && data().uniqueAttendees is number
+        && data().mentorsTrained is number
+        && data().attendance is list
+        && data().board is list
+        && data().highlights is string
+        && data().highlights.size() <= 600
+        && (!('avgFeedback' in data()) || data().avgFeedback == null || data().avgFeedback is number)
+        && noIdentity()
+        && data().keys().hasOnly(['circleId', 'circleName', 'semester', 'eventsHeld', 'attendance', 'uniqueAttendees', 'mentorsTrained', 'board', 'avgFeedback', 'highlights', 'status', 'authorUid', 'updatedAt']);
+      allow update: if (
+          (isChair(resource.data.circleId) || isBoard(resource.data.circleId))
+          && resource.data.status in ['draft', 'changes']
+          && data().status in ['draft', 'submitted']
+          && changed().hasOnly(['highlights', 'status', 'updatedAt', 'eventsHeld', 'attendance', 'uniqueAttendees', 'mentorsTrained', 'board', 'avgFeedback'])
+          && data().highlights is string
+          && data().highlights.size() <= 600
+        ) || (
+          isSA()
+          && resource.data.status == 'submitted'
+          && data().status in ['accepted', 'changes']
+          && changed().hasOnly(['status', 'reviewNote', 'reviewedBy', 'updatedAt'])
+          && data().reviewedBy == request.auth.uid
+          && data().reviewNote is string
+          && data().reviewNote.size() <= 300
+        );
+      allow delete: if false;
+    }
+    function youSaidMine() {
+      return resource.data.get('forEveryone', true) == true
+        || exists(/databases/$(db)/documents/petitions/$(resource.data.get('petitionId', 'none'))/signatures/$(request.auth.uid))
+        || exists(/databases/$(db)/documents/events/$(resource.data.get('eventId', 'none'))/rsvps/$(request.auth.uid))
+        || exists(/databases/$(db)/documents/events/$(resource.data.get('eventId', 'none'))/attendance/$(request.auth.uid))
+        || exists(/databases/$(db)/documents/events/$(resource.data.get('eventId', 'none'))/feedback/$(request.auth.uid))
+        || (resource.data.get('circleId', '') != ''
+          && exists(/databases/$(db)/documents/circles/$(resource.data.get('circleId', 'none'))/members/$(request.auth.uid)));
+    }
+    match /youSaid/{id} {
+      allow read: if isSA() || (approved() && youSaidMine());
+      allow create: if isSA()
+        && data().authorUid == request.auth.uid
+        && data().title is string && data().title.size() > 0 && data().title.size() <= 80
+        && data().line is string && data().line.size() > 0 && data().line.size() <= 140
+        && data().date is string && data().date.size() > 0 && data().date.size() <= 40
+        && data().createdAt == request.time
+        && (!('link' in data()) || (data().link is string && data().link.size() <= 200))
+        && (!('source' in data()) || (data().source is string && data().source.size() <= 80))
+        && (!('forEveryone' in data()) || data().forEveryone is bool)
+        && (!('petitionId' in data()) || (data().petitionId is string && data().petitionId.size() <= 80))
+        && (!('eventId' in data()) || (data().eventId is string && data().eventId.size() <= 80))
+        && (!('circleId' in data()) || (data().circleId is string && data().circleId.size() <= 80))
+        && (!('reason' in data()) || (data().reason is string && data().reason.size() <= 80))
+        && noIdentity()
+        && data().keys().hasOnly(['title', 'line', 'link', 'source', 'date', 'authorUid', 'createdAt', 'forEveryone', 'petitionId', 'eventId', 'circleId', 'reason']);
+      allow update, delete: if false;
+    }
+  }
+}

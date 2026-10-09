@@ -1,0 +1,12 @@
+{
+  "name": "nabt-functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": { "node": "20" },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "~5.3.3"
+  }
+}

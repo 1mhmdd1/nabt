@@ -1,0 +1,23 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "functions",
+    "tests",
+    "handoff",
+    "uploads",
+    "src/ml/moderation.test.ts",
+    "src/**/*.test.ts"
+  ]
+}

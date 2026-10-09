@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "NABT",
+    "slug": "nabt",
+    "scheme": "nabt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#411516"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "lb.edu.ua.nabt"
+    },
+    "android": {
+      "package": "lb.edu.ua.nabt",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#411516"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#411516"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#411516",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ],
+      "expo-asset",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NABT uses the camera to read your UA ID card. The photo is checked and then deleted."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NABT can read your UA ID card from a photo you choose."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "NABT listens for a voice check-in. It reads tone signals on your phone and deletes the recording right after."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "nabt-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node -e \"require('fs').copyFileSync('../../docs/firestore.rules','./firestore.rules')\" && firebase emulators:exec --only firestore --project demo-nabt \"node --test --test-concurrency=1 rules.test.mjs\" && firebase emulators:exec --only firestore --project demo-nabt-node \"node --test --test-concurrency=1 node-rewards.test.mjs\"",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-tools": "latest"
+  }
+}
