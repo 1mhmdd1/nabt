@@ -99,6 +99,12 @@ export async function eventCode(eventId: string) {
   return String(res.code || "");
 }
 
+/** The code typed from under the organizer's QR, when the camera can't scan. Returns the event id. */
+export async function eventByCode(code: string) {
+  const res = await postFn<{ eventId?: string }>("/event-by-code", { code });
+  return String(res.eventId || "");
+}
+
 export async function endEvent(eventId: string) {
   return postFn<{ issued?: number }>("/end-event", { eventId });
 }

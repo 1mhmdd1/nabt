@@ -202,7 +202,7 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-  if (req.url === "/issue-certificates" || req.url === "/end-event" || req.url === "/event-code" || req.url === "/event-check-in" || req.url === "/feedback-tally" || req.url === "/mentor-respond") {
+  if (req.url === "/issue-certificates" || req.url === "/end-event" || req.url === "/event-code" || req.url === "/event-by-code" || req.url === "/event-check-in" || req.url === "/feedback-tally" || req.url === "/mentor-respond") {
     try {
       const body = JSON.parse(await readBody(req));
       const actorUid = await callerUid(req);
@@ -218,6 +218,8 @@ const server = http.createServer(async (req, res) => {
             ? await endEventRoute(body, actorUid)
             : req.url === "/event-code"
               ? await eventCodeRoute(body, actorUid)
+              : req.url === "/event-by-code"
+                ? await eventByCode(body)
               : req.url === "/event-check-in"
                 ? await eventCheckIn(body, actorUid)
                 : req.url === "/feedback-tally"
@@ -741,6 +743,14 @@ async function eventCodeRoute(body, uid) {
     await ref.set({ code, at: Timestamp.now() });
   }
   return { code };
+}
+
+/** The typed code under the organizer's QR, for when the camera can't scan. Writes nothing. */
+async function eventByCode(body) {
+  const code = String(body.code || "").trim().toUpperCase();
+  const snap = code ? await db.collection("eventCodes").where("code", "==", code).limit(1).get() : null;
+  if (!snap || snap.empty) throw refuse(404, "That code doesn’t match an event. Check the code under the QR.");
+  return { eventId: snap.docs[0].id };
 }
 
 /** Attendance is written only here, and only with the code from the organizer's QR. */

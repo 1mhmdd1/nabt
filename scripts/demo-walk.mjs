@@ -187,7 +187,10 @@ async function main() {
     await see(page, /code [A-Z0-9]{6}/);
     const code = (await findText(page, /code [A-Z0-9]{6}/).innerText()).match(/code ([A-Z0-9]{6})/)[1];
     await switchTo(page, "202212826@ua.edu.lb", /\/home/);
-    await page.goto(`${BASE}/e/build-night/checkin?code=${code}`, { waitUntil: "domcontentloaded" });
+    // No second phone here: type the code shown under the QR on the scan screen.
+    await page.goto(`${BASE}/scan`, { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Check-in code").fill(code);
+    await page.getByText("Check in", { exact: true }).click();
     await see(page, "You’re on the list for this event.");
     await shot(page, "07-event-checkin.png");
     await switchTo(page, "202148217@ua.edu.lb", /\/home/);

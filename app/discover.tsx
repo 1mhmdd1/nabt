@@ -28,7 +28,7 @@ export default function Discover() {
   const query = q.trim().toLowerCase();
   const show = (text: string) => !query || text.toLowerCase().includes(query);
   const circles = Object.values(campus.circles);
-  const communities = circles.filter((c) => (c.kind === "community" && c.verified) || c.id === "quiet-hour");
+  const communities = circles.filter((c) => (c.kind === "community" && c.verified) || c.kind === "support");
   const exam = campus.circles["exam-week"];
   const places = campus.campus.filter((c) => c.icon === "pin");
   const featured = community.events.filter((e) => e.hostType === "sa");
@@ -178,7 +178,12 @@ export default function Discover() {
 
         {pill === "For you" && exam?.prompt ? (
           <Card>
-            <Text style={styles.k}>Exam Week · today’s prompt</Text>
+            <View style={styles.between}>
+              <Text style={styles.k}>{exam.name} · today’s prompt</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Open ${exam.name}`} onPress={() => router.push(`/circle/${exam.id}` as never)}>
+                <Text style={[t(600, 12.5, 16), { color: C.w80 }]}>Open</Text>
+              </Pressable>
+            </View>
             <Text style={[t(600, 17, 23), { marginTop: 8 }]}>{exam.prompt}</Text>
             <View style={[styles.stack, { marginTop: 12 }]}>
               {(exam.promptFaces || []).map((letter) => (
@@ -220,7 +225,7 @@ export default function Discover() {
                 {c.verified ? <Text style={styles.verified}>Verified</Text> : null}
               </View>
               <Text style={[styles.body, { marginTop: 6 }]}>{c.charter}</Text>
-              <Muted>{c.officialLine || "Official UA club"} · {c.memberCount ?? 0} members</Muted>
+              <Muted>{c.officialLine || (c.kind === "support" ? "Support circle" : "Official UA club")} · {c.memberCount ?? 0} members</Muted>
             </Card>
           ))}
 

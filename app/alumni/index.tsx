@@ -19,7 +19,7 @@ export default function AlumniMentors() {
           <View style={{ marginTop: 12, backgroundColor: C.card, borderRadius: 18, padding: 16 }}>
             <Text style={t(600, 15, 20)}>No mentors yet.</Text>
             <Text style={[t(400, 13.5, 19), { color: C.w64, marginTop: 4 }]}>
-              Graduates who confirm their record and open a mentoring offer appear here.
+              Alumni who offer mentoring appear here. Student Affairs moves a graduate to alumni.
             </Text>
           </View>
         ) : null}

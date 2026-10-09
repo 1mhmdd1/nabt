@@ -365,6 +365,15 @@ export async function handleFn(path: string, raw: unknown) {
     return { ok: true, code };
   }
 
+  if (route === "/event-by-code") {
+    // The typed code under the organizer's QR, for when the camera can't scan. Writes nothing.
+    uid();
+    const code = String(body.code || "").trim().toUpperCase();
+    const hit = code ? childDocs("eventCodes").find((row) => String(row.data.code || "") === code) : undefined;
+    if (!hit) throw new FnError(404, "bad_code", "That code doesn’t match an event. Check the code under the QR.");
+    return { ok: true, eventId: hit.id };
+  }
+
   if (route === "/event-check-in") {
     // Attendance is written only here, and only with the code from the organizer's QR.
     const userId = uid();

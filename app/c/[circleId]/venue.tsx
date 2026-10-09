@@ -7,8 +7,29 @@ import { Card, Eyebrow, Muted, SubHead } from "../../../src/community/ui";
 import { C, t } from "../../../src/theme";
 import { me, useCampus } from "../../../src/live";
 import { requestVenue, useCommunity } from "../../../src/live/communities";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
-export default function VenueRequest() {
+/** The next three weekdays from tomorrow, labelled like "Thu 16 Oct". */
+function nextWeekdays(count: number) {
+  const out: string[] = [];
+  const d = new Date();
+  while (out.length < count) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    out.push(`${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`);
+  }
+  return out;
+}
+
+export default function VenueRequestScreen() {
+  return (
+    <ChairOnly>
+      <VenueRequest />
+    </ChairOnly>
+  );
+}
+
+function VenueRequest() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const circle = useCampus((s) => s.circles[id]);
@@ -23,7 +44,7 @@ export default function VenueRequest() {
   const [form, setForm] = useState(false);
   const [nav, setNav] = useState(false);
   const isChair = circle?.chairUid === me();
-  const options = ["Thu 16 Oct", "Fri 17 Oct", "Tue 21 Oct"];
+  const [options] = useState(() => nextWeekdays(3));
 
   function toggle(day: string) {
     setDates((cur) => {

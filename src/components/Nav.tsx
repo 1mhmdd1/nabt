@@ -24,6 +24,7 @@ const ITEMS = [
   { title: "Propose a meetup", sub: "A counselor approves the spot", icon: <IconCalendar />, href: "/circle/exam-week" },
   { title: "Leave a node note", sub: "Shows on a Hope Node screen", icon: <IconHeart />, href: "/n/engineering", node: true },
   { title: "Start a petition", sub: "Ask Student Affairs for a change", icon: <IconDoc />, href: "/discover" },
+  { title: "Event check-in", sub: "Scan the organizer’s QR at the event", icon: <IconCalendar />, href: "/scan" },
 ].filter((item) => !(item.node && demoLocal())); // Hope Node is the next step, not part of the demo.
 
 export function FloatingNav({
