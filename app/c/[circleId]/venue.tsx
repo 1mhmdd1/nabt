@@ -75,7 +75,7 @@ export default function VenueRequest() {
         </Card>
         <Card>
           <Eyebrow>Plan with your board</Eyebrow>
-          <Text style={[t(700, 16, 22), { marginTop: 6 }]}>{circle?.nextEventTitle || "Build Night"} · {requests[0]?.dateOptions[0] || "Thu 16 Oct"}</Text>
+          <Text style={[t(700, 16, 22), { marginTop: 6 }]}>{[circle?.nextEventTitle || "Your next event", requests[0]?.dateOptions[0]].filter(Boolean).join(" · ")}</Text>
           <Muted>Budget, kit and logistics live in the private board channel.</Muted>
           <Pressable onPress={() => router.push(`/c/${id}/audit` as never)} style={styles.link}>
             <Text style={t(600, 13, 16)}>Open board channel</Text>

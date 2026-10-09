@@ -16,6 +16,7 @@ import { C, t } from "../../../src/theme";
 import { rsvpEvent, useCommunity } from "../../../src/live/communities";
 import { saveScreenDescription, screenLine, useEventOrganizer } from "../../../src/live/eventCheckin";
 import { ScreenDescription } from "../../../src/components/ScreenDescription";
+import { toast } from "../../../src/toast";
 
 type Need = { id: string; label: string };
 type Acc = { title: string; body: string; needs: Need[]; selected: string[]; noteLabel: string; note: string; foot: string; send: string; going: string; ask: string };
@@ -95,9 +96,20 @@ function CommunityEvent({ id }: { id: string }) {
   async function remind() {
     setRemindNote("");
     try {
-      setReminded(await toggleEventReminder(id, event?.title || "Campus event", event?.whenLine || event?.meta));
+      const on = await toggleEventReminder(id, event?.title || "Campus event", event?.whenLine || event?.meta);
+      setReminded(on);
+      toast(on ? "Reminder set" : "Reminder cancelled");
     } catch (err) {
       setRemindNote(err instanceof Error ? err.message : "Could not set a reminder on this phone.");
+    }
+  }
+  async function answer(go: boolean) {
+    try {
+      await rsvpEvent(id, go);
+      toast(go ? "You’re going. See you there." : "Got it. We won’t count you in.");
+      if (router.canGoBack()) router.back();
+    } catch (err) {
+      setRemindNote(err instanceof Error ? err.message : "Could not save that.");
     }
   }
   const seeded = screenLine(event?.screenDescription, event?.description || event?.blurb);
@@ -192,8 +204,17 @@ function CommunityEvent({ id }: { id: string }) {
           </View>
         ) : null}
         {feedback ? <FeedbackSummary row={feedback} /> : null}
-        <Pressable onPress={() => void rsvpEvent(id, !going)} style={eventStyles.go}>
-          <Text style={[t(700, 16, 20), { color: C.burgundy }]}>{going ? "You’re going" : "I’ll go"}</Text>
+        {going ? (
+          <View style={[eventStyles.go, { backgroundColor: "transparent", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" }]}>
+            <Text style={t(700, 16, 20)}>You’re going</Text>
+          </View>
+        ) : (
+          <Pressable accessibilityRole="button" onPress={() => void answer(true)} style={eventStyles.go}>
+            <Text style={[t(700, 16, 20), { color: C.burgundy }]}>I’ll go</Text>
+          </Pressable>
+        )}
+        <Pressable accessibilityRole="button" onPress={() => void answer(false)} style={eventStyles.remind}>
+          <Text style={[t(600, 15, 18), { color: C.w70 }]}>Can’t make it</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: reminded }} onPress={() => void remind()} style={eventStyles.remind}>
           <Text style={t(600, 15, 18)}>{reminded ? "Reminder set · tap to cancel" : "Remind me"}</Text>

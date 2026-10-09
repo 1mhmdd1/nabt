@@ -585,6 +585,16 @@ export function buildSeed(): SeedBlob {
     createdAt: Date.now() - 3 * hour,
   });
 
+  put("youSaid/library-hours", {
+    title: "Library hours: answer on the way",
+    line: "Student Affairs is costing a later closing time for exam weeks.",
+    date: "This week",
+    source: "Your petition",
+    petitionId: "library-hours",
+    authorUid: OSA,
+    createdAt: Date.now() - hour,
+  });
+
   put("supportRequests/olive", {
     uid: "uid-olive",
     reason: "Stress or exams",

@@ -169,6 +169,9 @@ async function main() {
     await see(page, "Robotics Build Night");
     await scrollTo(page, "I’ll go");
     await page.getByText("I’ll go").click();
+    await see(page, "You’re going. See you there.");
+    await page.goto(`${BASE}/e/build-night`, { waitUntil: "domcontentloaded" });
+    await scrollTo(page, "Can’t make it");
     await see(page, "You’re going");
     // A student can only RSVP and set a reminder here. Check-in, End event and certificates belong to the organizer.
     for (const word of ["Scan QR", "End event", "Event check-in", "Issue certificates"]) {

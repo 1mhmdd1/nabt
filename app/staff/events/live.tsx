@@ -1,17 +1,17 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
-import { SvgXml } from "react-native-svg";
 import { OutlineButton, StaffFrame, WhiteButton } from "../../../src/components/staff/StaffChrome";
-import { liveChartSvg } from "../../../src/art/liveChartSvg";
+import { demoLocal } from "../../../src/local/mode";
 import { C, t } from "../../../src/theme";
 import { useStaff } from "../../../src/live/staff";
 
 export default function Live() {
   const live = useStaff((s) => s.live);
   const doors = (live?.doors as { name: string; sub: string; n: string }[]) || [];
-  const checked = Number(live?.checked || 64);
-  const rsvp = Number(live?.rsvp || 80);
+  const checked = Number(live?.checked || 0);
+  const rsvp = Number(live?.rsvp || 0);
+  const shown = (v: unknown) => (v == null || v === "" ? "—" : String(v));
   return (
     <StaffFrame title={String(live?.title || "Breathe before finals")} chip="Live" chipOn back="/staff/events">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
@@ -28,7 +28,7 @@ export default function Live() {
                 stroke="#fff"
                 strokeWidth={10}
                 strokeLinecap="round"
-                strokeDasharray="322 402"
+                strokeDasharray={`${rsvp ? Math.round((Math.min(checked, rsvp) / rsvp) * 402) : 0} 402`}
                 transform="rotate(-90 75 75)"
               />
             </Svg>
@@ -38,31 +38,30 @@ export default function Live() {
             </View>
           </View>
           <View style={{ flex: 1, gap: 10 }}>
-            <Stat n={String(live?.inRoom ?? 71)} label="in the room (node estimate)" />
-            <Stat n={String(live?.walkIns ?? 7)} label="walk-ins without RSVP" />
-            <Stat n={String(live?.freeSeats ?? 140)} label={`seats free · ${live?.cap ?? 220} cap`} />
+            <Stat n={shown(live?.walkIns)} label="walk-ins without RSVP" />
+            <Stat n={shown(live?.freeSeats)} label={`seats free${live?.cap != null ? ` · ${live.cap} cap` : ""}`} />
           </View>
         </View>
-        <Text style={styles.fl}>Check-ins per 5 min</Text>
-        <View style={styles.chart}>
-          <SvgXml xml={liveChartSvg} width="100%" height={56} />
-        </View>
-        <Text style={styles.fl}>Hope Nodes</Text>
-        <View style={styles.list}>
-          {doors.map((d, i) => (
-            <View key={d.name} style={[styles.it, i > 0 && styles.line]}>
-              <View style={styles.dot} />
-              <View style={{ flex: 1 }}>
-                <Text style={t(600, 14, 18)}>{d.name}</Text>
-                <Text style={styles.sub}>{d.sub}</Text>
-              </View>
-              <Text style={t(600, 16, 18)}>{d.n}</Text>
+        {/* Hope Node doors are a future concept; the phone demo leaves them out. */}
+        {!demoLocal() && doors.length ? (
+          <>
+            <Text style={styles.fl}>Hope Nodes</Text>
+            <View style={styles.list}>
+              {doors.map((d, i) => (
+                <View key={d.name} style={[styles.it, i > 0 && styles.line]}>
+                  <View style={styles.dot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={t(600, 14, 18)}>{d.name}</Text>
+                    <Text style={styles.sub}>{d.sub}</Text>
+                  </View>
+                  <Text style={t(600, 16, 18)}>{d.n}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          </>
+        ) : null}
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 10 }]}>Counts only. Staff never see who checked in.</Text>
         <View style={styles.row}>
-          <OutlineButton compact label="Message attendees" />
           <View style={{ flex: 1 }}>
             <WhiteButton label="End & send pulse" onPress={() => router.push("/staff/events/insights" as never)} />
           </View>

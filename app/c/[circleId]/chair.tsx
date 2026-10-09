@@ -69,7 +69,7 @@ function ChairDashboardScreen() {
     .filter((m): m is NonNullable<typeof m> => Boolean(m));
   const roster = useEventRoster(liveEvent?.id || "");
   const here = roster?.length ?? 0;
-  const bars = [...(circle?.attendance || [10, 14, 8, 18, 22])];
+  const bars = [...(circle?.attendance || [])].slice(-5);
   if (liveEvent && here > 0) bars[bars.length - 1] = here;
   const needs = circle?.needs || [];
 
@@ -181,7 +181,7 @@ function ChairDashboardScreen() {
                 );
               })}
             </Svg>
-            <Muted>Solid returning · light new</Muted>
+            <Muted>{bars.length ? "Solid returning · light new" : "No events yet"}</Muted>
             {liveEvent ? (
               <Pressable onPress={() => router.push(`/e/${liveEvent.id}/checkin` as never)}>
                 <Muted>

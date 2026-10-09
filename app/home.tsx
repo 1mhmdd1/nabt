@@ -15,7 +15,8 @@ import {
   IconWordLotus,
 } from "../src/components/Icons";
 import { C, t } from "../src/theme";
-import { me, setCampusMode, useCampus } from "../src/live";
+import { me, setCampusMode, thankBack, useCampus } from "../src/live";
+import { toast } from "../src/toast";
 import { hideAnnouncement, useImpact } from "../src/live/impact";
 import { useNabt } from "../src/state";
 import { feedbackWasSkipped, sendFeedback, skipFeedback, useMyRecord } from "../src/live/records";
@@ -157,9 +158,20 @@ export default function Home() {
               <Text style={t(600, 15, 20)}>{campus.rootNote.title}</Text>
               <Text style={styles.sub}>{campus.rootNote.body}</Text>
               {campus.rootNote.action ? (
-                <Text style={styles.link} onPress={() => router.push("/chats" as never)}>
+                <Text
+                  accessibilityRole="button"
+                  style={styles.link}
+                  onPress={() => {
+                    const id = campus.rootNote?.id || "";
+                    void thankBack(id)
+                      .then(() => toast("Thanked back · +1 root for both"))
+                      .catch((err: unknown) => toast(err instanceof Error ? err.message : "That didn’t send."));
+                  }}
+                >
                   {campus.rootNote.action}
                 </Text>
+              ) : campus.rootNote.thankedBack ? (
+                <Text style={styles.sub}>Thanked back · +1 root for both</Text>
               ) : null}
             </View>
           </View>

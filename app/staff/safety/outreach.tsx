@@ -38,7 +38,15 @@ export default function Outreach() {
         <Text style={[styles.fl, { marginTop: 14 }]}>Templates</Text>
         <View style={styles.cos}>
           {TEMPLATES.map((label) => (
-            <Pressable key={label} style={styles.co} onPress={() => setText(label === "Suggest 1564" ? "Embrace 1564 is there day and night if you want a person on the phone." : `Just checking in, ${name}. No need to reply unless you want to.`)}>
+            <Pressable key={label} style={styles.co} onPress={() =>
+                setText(
+                  label === "Suggest 1564"
+                    ? "Embrace 1564 is there day and night if you want a person on the phone."
+                    : label === "Offer a room"
+                      ? `If a quiet room on campus would help, ${name}, I can book one for you. Just tell me when.`
+                      : `Just checking in, ${name}. No need to reply unless you want to.`,
+                )
+              }>
               <Text style={t(600, 12.5, 16)}>{label}</Text>
             </Pressable>
           ))}

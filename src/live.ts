@@ -169,7 +169,7 @@ type CampusState = {
   badges: { id: string; name: string; order?: number }[];
   today: { title: string; body: string } | null;
   dropGoing: boolean;
-  rootNote: { title: string; body: string; action: string; badge: string; href?: string; circleId?: string; replyId?: string } | null;
+  rootNote: { id: string; title: string; body: string; action: string; badge: string; href?: string; circleId?: string; replyId?: string; thankedBack?: boolean } | null;
   going: string[];
   blocked: string[];
   campus: CampusItem[];
@@ -517,14 +517,17 @@ function attachCampus(db: ReturnType<typeof getFirebase>["db"], uid: string) {
 
     watch(query(collection(db, "growthEvents"), where("uid", "==", uid)), (snap) => {
       const roots = snap.docs
-        .map((d) => d.data())
-        .filter((d) => d.kind === "root" && d.source === "thanks" && d.title);
+        .map((d) => ({ id: d.id, ...d.data() }) as Record<string, unknown> & { id: string })
+        .filter((d) => d.kind === "root" && d.source === "thanks" && d.title)
+        .sort((a, b) => millis(b.at) - millis(a.at));
       const note = roots[0];
       const circleId = note?.circleId ? String(note.circleId) : "";
       const replyId = note?.replyId ? String(note.replyId) : "";
       useCampus.setState({
         rootNote: note
           ? {
+              id: note.id,
+              thankedBack: note.thankedBack === true,
               title: String(note.title),
               body: String(note.body || ""),
               action: String(note.action || ""),
@@ -896,6 +899,11 @@ export async function votePoll(circleId: string, messageId: string, option: numb
   const uid = me();
   if (!uid) throw new Error("Sign in first.");
   await setDoc(doc(db, "circles", circleId, "messages", messageId, "votes", uid), { option, at: serverTimestamp() });
+}
+
+/** "Thank them back" right where the note is. It grows a root for both people. */
+export async function thankBack(eventId: string) {
+  await postFn("/thanks-back", { eventId });
 }
 
 /** Answering a kindness card is helping, so it grows a root. */

@@ -304,9 +304,25 @@ export async function handleFn(path: string, raw: unknown) {
       authorUid = String(msg.authorUid || "");
       if (authorUid === userId) throw new FnError(400, "own_reply", "You can’t thank your own reply.");
     }
-    // Thanks grows a root for both people.
+    // Thanks grows a root for both people, and the author can thank them back from Home.
     const grew = grow(userId, "roots", "thanks");
-    if (authorUid && readDoc(`users/${authorUid}`)) grow(authorUid, "roots", "thanks");
+    if (authorUid && readDoc(`users/${authorUid}`)) {
+      grow(authorUid, "roots", "thanks");
+      const me = readDoc(`users/${userId}`) || {};
+      writeDoc(`growthEvents/thanked-${Date.now()}`, {
+        uid: authorUid,
+        fromUid: userId,
+        kind: "root",
+        source: "thanks",
+        title: `${String(me.nickname || "Someone")} thanked you`,
+        body: "Your reply helped. A root grew for both of you.",
+        action: "Thank them back",
+        badge: "+1 root",
+        circleId,
+        replyId: messageId || replyId,
+        at: Date.now(),
+      });
+    }
     if (!grew) return { ok: true, grew: false };
     writeDoc(`growthEvents/grow-${Date.now()}`, {
       uid: userId,
@@ -318,8 +334,22 @@ export async function handleFn(path: string, raw: unknown) {
       badge: "+1",
       circleId,
       replyId: messageId || replyId,
+      at: Date.now(),
     });
     return { ok: true, grew: true };
+  }
+
+  if (route === "/thanks-back") {
+    const userId = uid();
+    const id = String(body.eventId || "");
+    const note = readDoc(`growthEvents/${id}`);
+    if (!note || note.uid !== userId || !note.fromUid) throw new FnError(404, "missing", "That note is gone.");
+    if (note.thankedBack === true) return { ok: true, already: true };
+    patchDoc(`growthEvents/${id}`, { thankedBack: true, action: "" });
+    grow(userId, "roots", "thanks");
+    const from = String(note.fromUid);
+    if (readDoc(`users/${from}`)) grow(from, "roots", "thanks");
+    return { ok: true };
   }
 
   if (route === "/event-code") {

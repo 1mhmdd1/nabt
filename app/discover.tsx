@@ -9,7 +9,7 @@ import { Avatar, Card, Muted } from "../src/community/ui";
 import { C, t } from "../src/theme";
 import { postPromptAnswer, useCampus } from "../src/live";
 import { rsvpEvent, signPetition, useCommunity } from "../src/live/communities";
-import { useImpact } from "../src/live/impact";
+import { useMyYouSaid } from "../src/live/impact";
 
 const PILLS = ["For you", "Circles", "Events", "Places"] as const;
 
@@ -24,7 +24,7 @@ export default function Discover() {
   const [answered, setAnswered] = useState("");
   const campus = useCampus();
   const community = useCommunity();
-  const youSaid = useImpact((s) => s.youSaid);
+  const youSaid = useMyYouSaid();
   const query = q.trim().toLowerCase();
   const show = (text: string) => !query || text.toLowerCase().includes(query);
   const circles = Object.values(campus.circles);
