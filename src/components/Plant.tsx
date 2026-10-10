@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, SvgXml } from "react-native-svg";
-import Animated, { Easing, runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from "react-native-reanimated";
+import Animated, { cancelAnimation, Easing, runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { plantSvg } from "../art/svgs";
 import { C, t } from "../theme";
 import { useNabt } from "../state";
@@ -140,7 +140,9 @@ export function PlantArt({
   const calm = useNabt((s) => s.calmMode);
   const bend = useSharedValue(0);
   const trail = useSharedValue(0);
+  // 0 at rest. One soft pulse plays after a new petal or root grows in, then everything is still.
   const glow = useSharedValue(0);
+  const rootGlow = useSharedValue(0);
   const petal = useSharedValue(1);
   const rootDraw = useSharedValue(1);
   const [showBadge, setShowBadge] = useState(false);
@@ -163,17 +165,26 @@ export function PlantArt({
   }, [artPetals, artRoots, scope]);
 
   useEffect(() => {
+    // Only the head and stem sway. Petals and roots never loop.
     if (calm) {
       bend.value = 0;
       trail.value = 0;
-      glow.value = 0.5;
       return;
     }
     const sway = { duration: 3200, easing: Easing.inOut(Easing.sin) };
     bend.value = withRepeat(withTiming(1, sway), -1, true);
     trail.value = withDelay(420, withRepeat(withTiming(1, sway), -1, true));
-    glow.value = withRepeat(withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true);
-  }, [calm, bend, trail, glow]);
+  }, [calm, bend, trail]);
+
+  useEffect(
+    () => () => {
+      cancelAnimation(glow);
+      cancelAnimation(rootGlow);
+      cancelAnimation(petal);
+      cancelAnimation(rootDraw);
+    },
+    [glow, rootGlow, petal, rootDraw],
+  );
 
   useEffect(() => {
     if (!active) return;
@@ -206,15 +217,28 @@ export function PlantArt({
             if (done) runOnJS(finishPetal)();
           }),
         );
+        glow.value = withDelay(
+          250 + 900,
+          withSequence(withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 300, easing: Easing.in(Easing.quad) })),
+        );
       }
       if (grewRoot) {
         setGrowingRoot(true);
         rootDraw.value = 0;
         rootDraw.value = withDelay(
           250,
-          withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) }, (done) => {
-            if (done) runOnJS(finishRoot)();
-          }),
+          withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) }),
+        );
+        // One glow pulse as the last part of the grow, then the root is static.
+        rootGlow.value = 0;
+        rootGlow.value = withDelay(
+          250 + 900,
+          withSequence(
+            withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) }),
+            withTiming(0, { duration: 300, easing: Easing.in(Easing.quad) }, (done) => {
+              if (done) runOnJS(finishRoot)();
+            }),
+          ),
         );
       }
     };
@@ -245,9 +269,10 @@ export function PlantArt({
   const headStyle = useAnimatedStyle(() => ({
     transform: about(TIP_X, TIP_Y, -3.2 + trail.value * 6.4),
   }));
+  // The soft glow behind the flower stays still at rest and swells once on a new petal.
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.45 + glow.value * 0.55,
-    transform: scaleAt(128, 76, 0.92 + glow.value * 0.14),
+    opacity: 0.6 + glow.value * 0.4,
+    transform: scaleAt(128, 76, 0.96 + glow.value * 0.1),
   }));
   const petalStyle = useAnimatedStyle(() => ({
     opacity: Math.min(1, petal.value * 1.6),
@@ -255,6 +280,9 @@ export function PlantArt({
   }));
   const rootProps = useAnimatedProps(() => ({
     strokeDashoffset: ROOT_LEN * (1 - rootDraw.value),
+  }));
+  const rootGlowProps = useAnimatedProps(() => ({
+    strokeOpacity: rootGlow.value * 0.45,
   }));
 
   const newPetalTurn = PETAL_TURNS[Math.max(0, Math.min(petals, PETAL_TURNS.length) - 1)];
@@ -281,6 +309,9 @@ export function PlantArt({
         {steadyRoots.map((d) => (
           <Path key={d} d={d} fill="none" stroke="#E8C7A3" strokeWidth={1.6} strokeLinecap="round" strokeOpacity={0.85} />
         ))}
+        {growingRoot ? (
+          <AnimatedPath d={newRoot} fill="none" stroke="#E3BE9A" strokeWidth={6} strokeLinecap="round" animatedProps={rootGlowProps} />
+        ) : null}
         {growingRoot ? (
           <AnimatedPath
             d={newRoot}

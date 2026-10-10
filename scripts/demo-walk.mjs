@@ -75,6 +75,14 @@ async function see(page, text, timeout = 20000) {
   }
 }
 
+async function longPress(page, text) {
+  const box = await findText(page, text).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+}
+
 async function login(page, email, urlPart) {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("UA ID").waitFor({ timeout: 30000 });
@@ -159,8 +167,12 @@ async function main() {
     await see(page, "Phone numbers stay off NABT");
     await shot(page, "05-circle-safety-kindness.png");
     await page.getByRole("button", { name: "You've got this" }).click();
-    await scrollTo(page, "Thanks");
-    await page.getByText("Thanks", { exact: true }).click();
+    // Message actions are hidden until a long-press on the message.
+    if (await page.getByText("Report", { exact: true }).count()) throw new Error("Message actions show without a long-press");
+    await scrollTo(page, "That unblocked me. Thank you.");
+    await longPress(page, "That unblocked me. Thank you.");
+    await page.getByRole("menuitem", { name: "Thanks" }).click();
+    await see(page, "Thanked");
     pass("circle chat");
 
     await page.goto(`${BASE}/c/robotics`, { waitUntil: "domcontentloaded" });

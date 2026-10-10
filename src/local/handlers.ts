@@ -303,6 +303,9 @@ export async function handleFn(path: string, raw: unknown) {
       if (!msg) throw new FnError(404, "missing", "That reply is gone.");
       authorUid = String(msg.authorUid || "");
       if (authorUid === userId) throw new FnError(400, "own_reply", "You can’t thank your own reply.");
+      const thankedBy = Array.isArray(msg.thankedBy) ? (msg.thankedBy as string[]) : [];
+      if (thankedBy.includes(userId)) return { ok: true, already: true };
+      patchDoc(`circles/${circleId}/messages/${messageId}`, { thankedBy: [...thankedBy, userId] });
     }
     // Thanks grows a root for both people, and the author can thank them back from Home.
     const grew = grow(userId, "roots", "thanks");

@@ -170,6 +170,11 @@ function guardWrite(path: string, data: Record<string, unknown> | null) {
   if (top === "staffMeetups" && !staff && !readDoc(path) && data?.uid !== account.uid) forbid();
   // Only an account Student Affairs graduated to alumni can offer mentoring.
   if (top === "alumniMentors" && claims.alumni !== true) forbid();
+  // Only the author deletes or edits a chat message.
+  if ((top === "circles" || top === "chats") && parts[2] === "messages" && parts.length === 4) {
+    const existing = readDoc(path);
+    if (existing && String(existing.authorUid || "") !== account.uid && (data === null || keys.some((k) => k !== "thankedBy" && k !== "votes"))) forbid();
+  }
   if (top === "circles" && parts[2] === "members" && !staff) {
     const roles = data?.roles;
     if (Array.isArray(roles) && roles.length > 0) forbid();

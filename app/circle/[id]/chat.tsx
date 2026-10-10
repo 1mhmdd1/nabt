@@ -1,3 +1,5 @@
+import * as Clipboard from "expo-clipboard";
+import { MessageBubble } from "../../../src/components/chat/MessageBubble";
 import { useEffect, useState, type ReactNode } from "react";
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -12,7 +14,7 @@ import { Header, Seg } from "./index";
 import { C, t } from "../../../src/theme";
 import { useNabt } from "../../../src/state";
 import { OutgoingHalt } from "../../../src/moderation/outgoing";
-import { answerKindness, blockAuthor, closeKindness, me, reportMessage, sendCircleAttachment, sendCircleMessage, sendCirclePoll, thankReply, useCampus, votePoll, type ChatAttachment, type ChatMsg } from "../../../src/live";
+import { answerKindness, blockAuthor, closeKindness, deleteCircleMessage, me, reportMessage, sendCircleAttachment, sendCircleMessage, sendCirclePoll, thankReply, useCampus, votePoll, type ChatAttachment, type ChatMsg } from "../../../src/live";
 import { toast } from "../../../src/toast";
 import { writeSafetySignal } from "../../../src/live/voiceSafety";
 
@@ -161,7 +163,7 @@ export default function CircleChat() {
             </Rule>
           ) : (
             <View key={m.id}>
-              <Bubble circleId={circleId} msg={m} mine={m.authorUid === me()} members={members} highlight={highlight === m.id} onReport={() => reportMessage({ circleId, messageId: m.id })} onBlock={() => void blockAuthor(m.authorUid, { circleId, messageId: m.id })} onThanks={m.replyTo && m.authorUid !== me() ? () => void thankReply({ circleId, messageId: m.id }) : undefined} />
+              <Bubble circleId={circleId} msg={m} mine={m.authorUid === me()} members={members} highlight={highlight === m.id || replyTo === m.id} onReply={() => setReplyTo(m.id)} />
               {m.kindness && !m.kindnessClosed && m.authorUid !== me() && !messages.some((other) => other.replyTo === m.id) ? (
                 <View style={styles.nudge}>
                   <Text style={styles.nudgeTitle}>Someone here could use a hand with this</Text>
@@ -288,46 +290,47 @@ function Rule({ children }: { children: ReactNode }) {
   );
 }
 
-function Bubble({ circleId, msg, mine, members, highlight, onReport, onBlock, onThanks }: { circleId: string; msg: ChatMsg; mine?: boolean; members: { id: string; initial: string }[]; highlight?: boolean; onReport?: () => void; onBlock?: () => void; onThanks?: () => void }) {
+function Bubble({ circleId, msg, mine, members, highlight, onReply }: { circleId: string; msg: ChatMsg; mine: boolean; members: { id: string; initial: string }[]; highlight?: boolean; onReply: () => void }) {
   const letter = msg.initial || members.find((m) => m.id === msg.authorUid)?.initial || "";
   const reacts = msg.reactions || [];
+  const thanked = (msg.thankedBy || []).includes(me());
+  const content = msg.attachment || msg.poll ? (
+    <>
+      {msg.attachment ? <Attachment item={msg.attachment} mine={mine} /> : null}
+      {msg.poll ? <Poll circleId={circleId} messageId={msg.id} question={msg.poll.question} options={msg.poll.options} mine={mine} /> : null}
+    </>
+  ) : undefined;
+  const fail = (what: string) => (err: unknown) => toast(err instanceof Error ? err.message : what);
   return (
-    <View style={[styles.grp, mine && { justifyContent: "flex-end" }]}>
-      {mine ? null : (
-        <View style={styles.av}>
-          <Text style={[t(600, 13, 13), { color: C.gold }]}>{letter}</Text>
-        </View>
-      )}
-      <View style={{ maxWidth: 262, alignItems: mine ? "flex-end" : "flex-start" }}>
-        {mine ? null : (
-          <Text style={styles.who}>
-            {msg.authorNickname}
-            {msg.timeLabel ? <Text style={{ fontWeight: "500" }}>  {msg.timeLabel}</Text> : null}
-          </Text>
-        )}
-        <View style={[styles.b, mine && styles.mine, highlight && { borderWidth: 1.5, borderColor: C.gold }, reacts.length > 0 && { marginBottom: 16 }]}>
-          {msg.attachment ? <Attachment item={msg.attachment} mine={mine} /> : null}
-          {msg.poll ? <Poll circleId={circleId} messageId={msg.id} question={msg.poll.question} options={msg.poll.options} mine={mine} /> : msg.text ? <Text style={[t(400, 14.5, 20), { color: mine ? C.ground : C.white }]}>{msg.text}</Text> : null}
-          {reacts.length ? (
-            <View style={styles.reacts}>
-              {reacts.map((r) => (
-                <View key={r.icon + r.label} style={[styles.chip, r.mine && styles.chipMine]}>
-                  {r.icon === "root" ? <IconRootChip /> : <IconHeartChip />}
-                  <Text style={t(600, 11, 11)}>{r.label}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-        {mine ? null : (
-          <View style={styles.msgActs}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Report message" onPress={() => void Promise.resolve(onReport?.()).then(() => toast("Report sent")).catch((err: unknown) => toast(err instanceof Error ? err.message : "Report did not send."))}><Text style={styles.msgAct}>Report</Text></Pressable>
-            <Text style={styles.msgAct} onPress={onBlock}>Block</Text>
-            {onThanks ? <Text style={styles.msgAct} onPress={onThanks}>Thanks</Text> : null}
+    <MessageBubble
+      name={msg.authorNickname}
+      initial={letter}
+      time={msg.timeLabel}
+      mine={mine}
+      text={msg.text || msg.poll?.question || msg.attachment?.name || ""}
+      highlight={highlight}
+      thanked={thanked}
+      footer={
+        reacts.length ? (
+          <View style={styles.reactsRow}>
+            {reacts.map((r) => (
+              <View key={r.icon + r.label} style={[styles.chip, r.mine && styles.chipMine]}>
+                {r.icon === "root" ? <IconRootChip /> : <IconHeartChip />}
+                <Text style={t(600, 11, 11)}>{r.label}</Text>
+              </View>
+            ))}
           </View>
-        )}
-      </View>
-    </View>
+        ) : null
+      }
+      onThanks={() => thankReply({ circleId, messageId: msg.id }).then(() => toast("Thanks sent. A root grew for you both.")).catch(fail("Thanks did not send."))}
+      onReply={onReply}
+      onReport={() => reportMessage({ circleId, messageId: msg.id }).then(() => toast("Report sent")).catch(fail("Report did not send."))}
+      onBlock={() => blockAuthor(msg.authorUid, { circleId, messageId: msg.id }).then(() => toast("Blocked")).catch(fail("Could not block."))}
+      onCopy={() => Clipboard.setStringAsync(msg.text || "").then(() => toast("Copied"))}
+      onDelete={() => deleteCircleMessage(circleId, msg.id).then(() => toast("Deleted")).catch(fail("Could not delete."))}
+    >
+      {content}
+    </MessageBubble>
   );
 }
 
@@ -417,8 +420,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   kindChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: C.deep },
   kindChipText: { ...t(600, 12, 16), color: C.white },
-  msgActs: { flexDirection: "row", gap: 10, marginTop: 4 },
-  msgAct: { ...t(600, 11, 14), color: C.w64 },
+  reactsRow: { flexDirection: "row", gap: 4, marginTop: 4 },
   grp: { flexDirection: "row", gap: 8, marginTop: 18, alignItems: "flex-start" },
   av: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.deep, alignItems: "center", justifyContent: "center" },
   who: { ...t(600, 12, 14), color: C.w64, marginBottom: 4 },

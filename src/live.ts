@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -51,6 +52,7 @@ export type ChatMsg = {
   kindnessClosed?: boolean;
   replyTo?: string;
   reactions?: { icon: "heart" | "root"; label: string; mine?: boolean }[];
+  thankedBy?: string[];
   attachment?: ChatAttachment;
   poll?: { question: string; options: string[] };
 };
@@ -709,6 +711,7 @@ function watchCircle(db: ReturnType<typeof getFirebase>["db"], id: string) {
         kindnessClosed: data.kindnessClosed === true,
         replyTo: data.replyTo ? String(data.replyTo) : undefined,
         reactions: data.reactions as ChatMsg["reactions"],
+        thankedBy: Array.isArray(data.thankedBy) ? (data.thankedBy as string[]) : undefined,
         attachment: data.attachment ? (data.attachment as ChatAttachment) : undefined,
         poll: data.poll ? (data.poll as ChatMsg["poll"]) : undefined,
       } satisfies ChatMsg;
@@ -927,6 +930,12 @@ export async function reportMessage(where: { circleId?: string; chatId?: string;
     chatId: where.chatId || "",
     at: serverTimestamp(),
   });
+}
+
+/** Your own message only. */
+export async function deleteCircleMessage(circleId: string, messageId: string) {
+  const { db } = getFirebase();
+  await deleteDoc(doc(db, "circles", circleId, "messages", messageId));
 }
 
 export async function blockAuthor(blockedUid: string, where: { circleId?: string; messageId?: string }) {
