@@ -271,11 +271,16 @@ export function Header({
         </View>
       </View>
       <View style={styles.members}>
-        {members.map((m) => (
+        {members.slice(0, 4).map((m) => (
           <View key={m.id} style={styles.av}>
             <Text style={[t(600, 10, 10), { color: C.gold }]}>{m.initial}</Text>
           </View>
         ))}
+        {members.length > 4 ? (
+          <View style={styles.av}>
+            <Text style={[t(600, 9, 10), { color: C.white }]}>+{members.length - 4}</Text>
+          </View>
+        ) : null}
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Safety: report, block or leave" onPress={() => setSafety((v) => !v)} style={styles.icon}>
         <IconShieldCheck size={20} />

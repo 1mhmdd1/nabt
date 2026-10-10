@@ -1,5 +1,6 @@
 import { DEMO_PASSWORD } from "./mode";
 import { voiceBundle } from "../voice/bundle";
+import { seedExamWeekExtra, seedPeerCircles } from "./seedCircles";
 
 export type SeedAccount = {
   email: string;
@@ -305,29 +306,18 @@ export function buildSeed(): SeedBlob {
     order: 4,
   });
   member(put, "green", "uid-green-chair", "Yara", 1, ["chair"]);
-  put("circles/quiet-hour", {
-    name: "Quiet Hour",
-    kind: "support",
-    verified: false,
-    anonymous: true,
-    charter: "A quiet circle when you want company without a performance.",
-    officialLine: "Support circle",
-    memberCount: 6,
-    modLine: "Be kind. No phone numbers or links.",
-    prompt: "How is the week landing?",
-    order: 5,
-  });
+  seedPeerCircles(put);
   put("circles/exam-week", {
     name: "Exam week",
     kind: "support",
     verified: false,
     anonymous: true,
+    officialLine: "Circle",
     charter: "A lighter week, one small step at a time.",
     modLine: "Moderated by a campus counselor · nicknames only",
     prompt: "One thing that helped you study today?",
     promptMeta: "Today’s prompt · clears tomorrow",
     promptFaces: ["P", "F", "J"],
-    memberCount: 5,
     hereCount: 4,
     order: 6,
   });
@@ -339,6 +329,8 @@ export function buildSeed(): SeedBlob {
     ["uid-exam-jasmine", "Jasmine", "J"],
   ];
   examMembers.forEach(([uid, name], index) => member(put, "exam-week", uid, name, index + 1));
+  const examExtra = seedExamWeekExtra(put, examMembers.length + 1);
+  docs["circles/exam-week"].memberCount = examMembers.length + examExtra;
   const morning = Date.now() - 4 * hour;
   const examAnswers: [string, string, string, string][] = [
     ["uid-exam-pine", "Pine", "P", "The window seat in Faculty of Engineering."],
