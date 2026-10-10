@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { getFirebase } from "../../../../src/firebase";
@@ -55,6 +56,7 @@ export default function Room() {
           />
         </View>
         <Text style={styles.ph}>{space.name} is on today’s campus list.</Text>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

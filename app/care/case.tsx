@@ -1,3 +1,4 @@
+import { NAV_HEIGHT, useKeyboardOpen, useNavBottom } from "../../src/components/navSpace";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Screen } from "../../src/components/Chrome";
@@ -45,7 +46,7 @@ function Body() {
           </View>
         }
       />
-      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
+      <ScrollBody nav contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.who}>
           <View style={styles.av}>
             <Text style={[t(600, 16, 18), { color: C.gold }]}>{copy.initial}</Text>
@@ -109,8 +110,10 @@ const STAFF_TABS: Record<string, string> = {
 
 export function StaffBar({ active }: { active: string }) {
   const tabs = ["Overview", "Events", "Safety", "Reviews"];
+  const bottom = useNavBottom();
+  if (useKeyboardOpen()) return null;
   return (
-    <View style={[styles.nav, { pointerEvents: "box-none" }]}>
+    <View style={[styles.nav, { bottom, pointerEvents: "box-none" }]}>
       <View style={styles.bar}>
         {tabs.slice(0, 2).map((label) => (
           <Pressable key={label} accessibilityRole="tab" accessibilityState={{ selected: label === active }} onPress={() => router.push(STAFF_TABS[label] as never)} style={styles.tabHit}>
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
   mark: { width: 10, height: 10, borderRadius: 5, marginTop: 4, backgroundColor: C.white },
   markNow: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.7)" },
   sub: { ...t(500, 11.5, 16), color: C.w64 },
-  nav: { position: "absolute", left: 12, right: 12, bottom: 24, height: 64 },
+  nav: { position: "absolute", left: 12, right: 12, height: NAV_HEIGHT },
   bar: { flex: 1, borderRadius: 999, backgroundColor: C.raised, borderWidth: 1, borderColor: C.w10, flexDirection: "row", alignItems: "center" },
   tabHit: { flex: 1, alignItems: "center", justifyContent: "center" },
   tab: { textAlign: "center", ...t(600, 10, 12), color: C.w64 },

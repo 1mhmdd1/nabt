@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { GoldButton, Pills, StaffFrame } from "../../src/components/staff/StaffChrome";
@@ -64,6 +65,7 @@ export default function Announce() {
             </Text>
           </View>
         ))}
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

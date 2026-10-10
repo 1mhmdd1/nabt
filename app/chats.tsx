@@ -58,7 +58,7 @@ export default function Chats() {
           ))}
         </View>
       </View>
-      <ScrollBody contentContainerStyle={styles.list}>
+      <ScrollBody nav contentContainerStyle={styles.list}>
         {rows.length === 0 ? (
           <View style={styles.empty}>
             <Text style={t(600, 16, 21)}>{pending ? "Circles open after approval." : filter === "1:1" ? "No 1:1 chats yet." : "No Circles yet. Start one."}</Text>
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   pills: { flexDirection: "row", gap: 8, marginTop: 2, marginBottom: 8 },
   pill: { height: 32, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: C.w40, alignItems: "center", justifyContent: "center" },
   pillOn: { backgroundColor: C.white, borderColor: C.white },
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
+  list: { paddingHorizontal: 20, paddingBottom: 16 },
   row: { flexDirection: "row", gap: 12, alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.hair },
   req: { paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.hair },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },

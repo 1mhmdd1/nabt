@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -65,6 +66,7 @@ export default function VenueDetail() {
           <Chip label="That room’s taken, try Room 204?" />
           <Chip label="Not this week, here’s why" />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

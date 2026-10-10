@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Chip, SmallButton, StaffFrame } from "../../../src/components/staff/StaffChrome";
@@ -13,7 +14,7 @@ export default function Communities() {
   const requests = rows.reduce((n, r) => n + (r.requests || 0), 0);
   return (
     <StaffFrame title="Communities" chip={`${rows.length} verified`} tab="overview">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 }}>
         <View style={styles.kpis}>
           <Kpi n={String(members)} l="Active members" />
           <Kpi n={String(eventCount)} l="Events" />
@@ -54,6 +55,7 @@ export default function Communities() {
             ) : null}
           </View>
         ))}
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

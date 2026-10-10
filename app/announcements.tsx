@@ -1,3 +1,4 @@
+import { NavSpacer } from "../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -13,7 +14,7 @@ export default function Announcements() {
   return (
     <Screen>
       <SubHead title="Announcements" onBack={() => router.push("/home" as never)} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 10 }}>
         {rows.length === 0 ? (
           <Card>
             <Text style={t(600, 16, 22)}>Nothing new</Text>
@@ -41,6 +42,7 @@ export default function Announcements() {
           <Text style={t(600, 14, 18)}>You said, we did</Text>
           <Muted>On Discover. What changed after you asked.</Muted>
         </Pressable>
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="home" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

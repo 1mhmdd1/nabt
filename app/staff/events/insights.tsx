@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Chevron, StaffFrame, StaffMark } from "../../../src/components/staff/StaffChrome";
@@ -64,6 +65,7 @@ export default function Insights() {
           </Svg>
           <Text style={[t(500, 12, 16), { color: C.w64, flex: 1 }]}>No names or IDs. Results with under 5 replies are hidden.</Text>
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

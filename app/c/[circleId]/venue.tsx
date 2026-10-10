@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { FloatingNav } from "../../../src/components/Nav";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -80,7 +81,7 @@ function VenueRequest() {
   return (
     <Screen>
       <SubHead title={circle?.name || "Circle"} chip="Space · Chat" chipGold={false} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 10 }}>
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text style={styles.chair}>CHAIR</Text>
@@ -129,6 +130,7 @@ function VenueRequest() {
             </Pressable>
           </>
         ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" open={nav} onToggle={() => setNav((v) => !v)} />
     </Screen>

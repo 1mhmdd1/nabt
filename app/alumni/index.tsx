@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -13,7 +14,7 @@ export default function AlumniMentors() {
   return (
     <Screen>
       <BackBar title="Alumni mentors" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 16 }}>
         <Text style={[t(500, 14, 20), { color: C.w64 }]}>A short chat, a CV, or advice. Real names.</Text>
         {mentors.length === 0 ? (
           <View style={{ marginTop: 12, backgroundColor: C.card, borderRadius: 18, padding: 16 }}>
@@ -42,6 +43,7 @@ export default function AlumniMentors() {
             </Pressable>
           ))}
         </View>
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

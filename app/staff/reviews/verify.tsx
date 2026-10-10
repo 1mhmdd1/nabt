@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Avatar, Chevron, StaffFrame } from "../../../src/components/staff/StaffChrome";
@@ -9,7 +10,7 @@ export default function VerifyQueue() {
   const reviews = allReviews.filter((r) => r.status === "waiting");
   return (
     <StaffFrame title="Verification" chip={`${reviews.length} waiting`} tab="reviews">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
         <View style={styles.list}>
           {reviews.map((r, i) => (
             <Pressable key={r.id} onPress={() => router.push(`/staff/reviews/verify/${r.id}` as never)} style={[styles.it, i > 0 && styles.line]}>
@@ -23,6 +24,7 @@ export default function VerifyQueue() {
           ))}
         </View>
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 10 }]}>Verified Circles get room priority and fast-track venue requests.</Text>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

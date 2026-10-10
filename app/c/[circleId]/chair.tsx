@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Svg, { Rect } from "react-native-svg";
@@ -261,6 +262,7 @@ function ChairDashboardScreen() {
             <Text style={t(600, 13, 16)}>Mentor pool</Text>
           </Pressable>
         </View>
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="me" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

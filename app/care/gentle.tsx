@@ -41,7 +41,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Text style={styles.greet}>{copy.greeting}</Text>
-      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
+      <ScrollBody nav contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.panel}>
           <View style={{ alignSelf: "center" }}>
             <PlantLotus width={88} height={60} />

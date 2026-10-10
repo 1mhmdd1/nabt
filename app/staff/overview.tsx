@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -38,7 +39,7 @@ export default function Overview() {
   const today = (overview.today as { title: string; sub: string; href: string }[]) || [];
   return (
     <StaffFrame title="Overview" chip={String(overview.chip || "This week")} tab="overview">
-      <ScrollView style={styles.pad} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView style={styles.pad} contentContainerStyle={{ paddingBottom: 16 }}>
         <View style={styles.kpis}>
           {kpis.map((k) => (
             <View key={k.label} style={[styles.kpi, k.white && styles.kpiW]}>
@@ -108,6 +109,7 @@ export default function Overview() {
             </Pressable>
           ))}
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

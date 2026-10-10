@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Avatar, GoldButton, Pills, StaffFrame } from "../../src/components/staff/StaffChrome";
@@ -40,6 +41,7 @@ export default function Certificates() {
             }}
           />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

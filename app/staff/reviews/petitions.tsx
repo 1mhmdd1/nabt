@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -24,7 +25,7 @@ export default function Petitions() {
           { label: "Meetups", count: meetups.filter((m) => m.status === "proposed").length, href: "/staff/reviews/meetups" },
         ]}
       />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <Text style={styles.fl}>Pending go-live · {pending.length}</Text>
         {pending.length === 0 ? <Text style={[t(500, 14, 20), { color: C.w64 }]}>No petitions waiting.</Text> : null}
         {pending.map((p) => (
@@ -52,6 +53,7 @@ export default function Petitions() {
             <View style={styles.prog}><View style={[styles.bar, { width: "100%" }]} /></View>
           </Pressable>
         ))}
+        <NavSpacer />
       </ScrollView>
       {open && goal ? (
         <Sheet title={`Respond: ${goal.short || "Library hours"}`}>

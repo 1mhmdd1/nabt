@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import Svg, { Path, Rect } from "react-native-svg";
@@ -17,7 +18,7 @@ export default function StaffMe() {
   const initial = String(profile?.initial || name.slice(0, 1) || "·");
   return (
     <StaffFrame title="Me" tab="none" me>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.who}>
           <Avatar letter={initial} size={60} />
           <View>
@@ -59,6 +60,7 @@ export default function StaffMe() {
         <View style={{ marginTop: 16 }}>
           <OutlineButton label="Log out" onPress={() => logoutStaff().then(() => router.replace("/staff/signin" as never))} />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

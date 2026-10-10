@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -74,7 +75,7 @@ export default function CircleSpace() {
         <Text style={styles.mod}>{circle?.modLine || "Moderated by a campus counselor · nicknames only"}</Text>
       </View>
       <Seg active="space" id={circleId} />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 8 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 8 }} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <Text style={styles.eye}>{circle?.promptMeta || "Today’s prompt · clears tomorrow"}</Text>
           <Text style={styles.q}>{circle?.prompt || "What would make today lighter?"}</Text>
@@ -232,6 +233,7 @@ export default function CircleSpace() {
             <Text style={[t(700, 15, 18), { color: C.burgundy }]}>{joining ? "Joining…" : "Join Circle"}</Text>
           </Pressable>
         ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" quiet open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

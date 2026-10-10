@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { StaffFrame } from "../../src/components/staff/StaffChrome";
 import { C, t } from "../../src/theme";
@@ -27,6 +28,7 @@ export default function Reveals() {
           </View>
         ))}
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 8 }]}>Each reveal is on the Admin log and on that student’s privacy log. Staff never reveal without a written reason.</Text>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

@@ -1,3 +1,4 @@
+import { NavSpacer, useNavPad } from "../src/components/navSpace";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -54,7 +55,7 @@ export default function Home() {
   const daypart = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
   return (
     <Screen>
-      <ScrollView style={styles.main} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.main} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
         <View style={styles.top}>
           <IconWordLotus />
           {calm ? (
@@ -198,6 +199,7 @@ export default function Home() {
             </Pressable>
           ))}
         </View>
+        <NavSpacer />
       </ScrollView>
       <FeedbackPrompt />
       {modes ? (
@@ -227,6 +229,7 @@ export default function Home() {
 }
 
 function FeedbackPrompt() {
+  const navPad = useNavPad();
   const ask = useMyRecord()?.ask;
   const [skipped, setSkipped] = useState(false);
   const [rating, setRating] = useState(0);
@@ -239,7 +242,7 @@ function FeedbackPrompt() {
   }, [ask]);
   if (!ask || skipped || done) return null;
   return (
-    <View style={styles.ask}>
+    <View style={[styles.ask, { bottom: navPad - 8 }]}>
       <Text style={t(600, 15, 20)}>How was {ask.title}?</Text>
       <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
         {[1, 2, 3, 4, 5].map((n) => (
@@ -352,7 +355,7 @@ const styles = StyleSheet.create({
   entryLine: { borderTopWidth: 1, borderTopColor: C.hair },
   entryIcon: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: C.w16, alignItems: "center", justifyContent: "center" },
   entrySub: { marginTop: 1, ...t(400, 13, 18), color: C.w64, letterSpacing: -0.06 },
-  ask: { position: "absolute", left: 16, right: 16, bottom: 100, zIndex: 25, backgroundColor: C.card, borderRadius: 22, padding: 14 },
+  ask: { position: "absolute", left: 16, right: 16, zIndex: 25, backgroundColor: C.card, borderRadius: 22, padding: 14 },
   rate: { flex: 1, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", alignItems: "center", justifyContent: "center" },
   rateOn: { backgroundColor: C.white, borderColor: C.white },
   askInput: { marginTop: 8, height: 40, borderRadius: 12, backgroundColor: C.ground, paddingHorizontal: 10, ...t(500, 14, 18) },

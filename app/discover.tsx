@@ -1,3 +1,4 @@
+import { NavSpacer } from "../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -64,7 +65,7 @@ export default function Discover() {
           ))}
         </View>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 10 }}>
         {pill === "For you" ? (
           <Card onPress={() => router.push("/alumni" as never)}>
             <Text style={t(600, 16, 21)}>Alumni mentors</Text>
@@ -287,6 +288,7 @@ export default function Discover() {
             <Muted>Hope Threads, events and places appear here as people share them.</Muted>
           </Card>
         ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

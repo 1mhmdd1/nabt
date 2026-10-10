@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import Svg, { Path, Rect } from "react-native-svg";
@@ -59,6 +60,7 @@ export default function AccountReview() {
           <OutlineButton label="Request new photo" onPress={() => decideAccount(card.uid, "new_photo")} />
           <OutlineButton label="Reject" onPress={() => decideAccount(card.uid, "reject")} />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

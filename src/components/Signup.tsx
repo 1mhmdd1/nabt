@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SvgXml } from "react-native-svg";
 import { markSvg } from "../art/svgs";
@@ -41,14 +41,16 @@ export function SignupScreen({
           ))}
         </View>
       ) : null}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.main}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.main}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
       <HomeIndicator />
     </View>
   );

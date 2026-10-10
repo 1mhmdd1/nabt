@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
@@ -29,7 +30,7 @@ export default function SafetyInbox() {
   return (
     <StaffFrame title="Safety" chip={ready ? `${open.length} open` : ""} tab="safety">
       <Pills items={FILTERS} value={filter} onChange={setFilter} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 120, gap: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 8 }}>
         {shown.length === 0 ? <Text style={[t(500, 14, 20), { color: C.w64 }]}>No open cases.</Text> : null}
         {shown.map((c, i) => {
           const href = c.kind === "care" ? `/staff/safety/care?id=${c.id}` : `/staff/safety/${c.id}`;
@@ -107,6 +108,7 @@ export default function SafetyInbox() {
         <Pressable onPress={() => router.push("/staff/safety/held" as never)}>
           <Text style={[t(600, 13, 18), { color: C.white, textAlign: "center", marginTop: 6 }]}>Held content</Text>
         </Pressable>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

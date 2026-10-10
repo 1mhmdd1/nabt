@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { GoldButton, StaffFrame } from "../../src/components/staff/StaffChrome";
@@ -46,6 +47,7 @@ export default function YouSaidScreen() {
             <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 4 }]}>{item.date}{item.source ? ` · ${item.source}` : ""}</Text>
           </View>
         ))}
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

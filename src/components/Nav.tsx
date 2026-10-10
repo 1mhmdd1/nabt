@@ -1,3 +1,4 @@
+import { NAV_HEIGHT, useKeyboardOpen, useNavBottom } from "./navSpace";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { C, shadow, t } from "../theme";
@@ -41,6 +42,8 @@ export function FloatingNav({
   showDot?: boolean;
 }) {
   const slot = SLOTS[active];
+  const bottom = useNavBottom();
+  if (useKeyboardOpen()) return null;
   const go = (href: string) => {
     onToggle();
     router.push(href as never);
@@ -50,7 +53,7 @@ export function FloatingNav({
       {open ? (
         <Pressable style={styles.scrim} onPress={onToggle} accessibilityLabel="Close create menu" />
       ) : null}
-      <View style={[styles.wrap, { pointerEvents: "box-none" }]}>
+      <View style={[styles.wrap, { bottom, pointerEvents: "box-none" }]}>
         {open ? (
           <View style={styles.menu} accessibilityRole="menu" accessibilityLabel="Create">
             {ITEMS.map((item) => (
@@ -127,7 +130,7 @@ function Tab({
 
 const styles = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: C.scrim, zIndex: 29 },
-  wrap: { position: "absolute", left: 12, right: 12, bottom: 24, height: 64, zIndex: 30 },
+  wrap: { position: "absolute", left: 12, right: 12, height: NAV_HEIGHT, zIndex: 30 },
   bar: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 999,

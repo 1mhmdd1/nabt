@@ -56,7 +56,7 @@ function Body() {
           <Text style={t(600, 12, 16)}>{copy.chip}</Text>
         </View>
       </View>
-      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}>
+      <ScrollBody nav contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={[styles.case, styles.sel]}>
           <View style={styles.r1}>
             <View style={styles.av}>

@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
@@ -66,6 +67,7 @@ export default function Live() {
             <WhiteButton label="End & send pulse" onPress={() => router.push("/staff/events/insights" as never)} />
           </View>
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );
