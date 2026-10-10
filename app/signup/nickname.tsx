@@ -1,53 +1,32 @@
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SignupScreen } from "../../src/components/Signup";
 import { GoldButton } from "../../src/components/Chrome";
 import { C, t } from "../../src/theme";
 import { useNabt } from "../../src/state";
 import { emailFor, useSignup } from "../../src/signup";
-import { checkNickname, claimNickname, FnError, localNicknameProblem } from "../../src/auth";
-import { initialsOf, NICK_MAX, rollNickname } from "../../src/nickname/rules.mjs";
+import { claimNickname, FnError, localNicknameProblem } from "../../src/auth";
+import { initialsOf, rollNickname } from "../../src/nickname/rules.mjs";
 
 export default function Nickname() {
   const fullName = useSignup((s) => s.fullName);
   const studentId = useSignup((s) => s.studentId);
   const setNickname = useNabt((s) => s.setNickname);
-  const [rolled, setRolled] = useState(() => rollNickname());
-  const [own, setOwn] = useState("");
-  const [serverProblem, setServerProblem] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+  const identity = { fullName, studentId, email: emailFor(studentId) };
+  // Nicknames are random only. A roll that breaks the rules (e.g. close to the real name) is rolled again.
+  const roll = (avoid = "") => {
+    for (let i = 0; i < 30; i += 1) {
+      const next = rollNickname();
+      if (next !== avoid && !localNicknameProblem(next, identity)) return next;
+    }
+    return rollNickname();
+  };
+  const [rolled, setRolled] = useState(() => roll());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const checkId = useRef(0);
-
-  const identity = { fullName, studentId, email: emailFor(studentId) };
-  const typed = own.trim().replace(/\s+/g, " ");
-  const shown = typed || rolled;
-  const localProblem = typed ? localNicknameProblem(typed, identity) : null;
-  const problem = localProblem || serverProblem;
-  const ready = !problem && !checking && !saving;
-
-  // Ask the server whether a typed name is already taken, once the local rules pass.
-  useEffect(() => {
-    setServerProblem(null);
-    if (!typed || localProblem) return;
-    const id = ++checkId.current;
-    setChecking(true);
-    const timer = setTimeout(() => {
-      checkNickname(typed)
-        .then((p) => {
-          if (checkId.current === id) setServerProblem(p);
-        })
-        .catch(() => {
-          if (checkId.current === id) setServerProblem(null);
-        })
-        .finally(() => {
-          if (checkId.current === id) setChecking(false);
-        });
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [typed, localProblem]);
+  const shown = rolled;
+  const ready = !saving;
 
   async function use() {
     if (!ready) return;
@@ -76,16 +55,13 @@ export default function Nickname() {
         <View style={styles.av}>
           <Text style={[t(600, 36, 36), { color: C.gold, letterSpacing: 0.7 }]}>{initialsOf(shown) || "?"}</Text>
         </View>
-        <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit>
+        <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit accessibilityLabel={`Nickname ${shown}`}>
           {shown}
         </Text>
         <Pressable
           accessibilityLabel="Reroll"
           onPress={() => {
-            let next = rollNickname();
-            if (next === rolled) next = rollNickname();
-            setRolled(next);
-            setOwn("");
+            setRolled(roll(rolled));
             setSaveError(null);
           }}
           style={styles.reroll}
@@ -93,32 +69,9 @@ export default function Nickname() {
           <Text style={[t(600, 13, 13), { color: C.white }]}>Reroll</Text>
         </Pressable>
       </View>
-      <View style={{ marginTop: 28 }}>
-        <Text style={styles.k}>Suggest your own</Text>
-        <TextInput
-          value={own}
-          onChangeText={(v) => {
-            setOwn(v.slice(0, NICK_MAX + 4));
-            setSaveError(null);
-          }}
-          placeholder="e.g. Gentle Olive"
-          placeholderTextColor={C.w64}
-          autoCapitalize="words"
-          autoCorrect={false}
-          maxLength={NICK_MAX + 4}
-          style={[styles.input, problem && typed ? styles.inputBad : null]}
-          accessibilityLabel="Suggest your own"
-        />
-        {typed && problem ? (
-          <Text style={styles.bad}>{problem}</Text>
-        ) : typed && checking ? (
-          <Text style={styles.rule}>Checking…</Text>
-        ) : typed ? (
-          <Text style={styles.ok}>Looks good.</Text>
-        ) : (
-          <Text style={styles.rule}>3–20 letters. Can’t be your real name, your ID, a phone number or a link.</Text>
-        )}
-      </View>
+      <Text style={[styles.rule, { marginTop: 28, textAlign: "center" }]}>
+        Nicknames are picked at random so nobody can be recognised. Tap Reroll for another.
+      </Text>
       <Text style={styles.explain}>
         Circles, threads and notes always show your nickname. You choose when to share your name in 1:1s.
       </Text>

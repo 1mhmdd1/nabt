@@ -4,6 +4,7 @@ import { LotusArt } from "../src/components/LotusArt";
 import { BackBar, GhostButton, shareCard, useScreenReady } from "../src/components/NodeChrome";
 import { C, t } from "../src/theme";
 import { useNodeRewards } from "../src/live/nodeRewards";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 export default function StoryCard() {
   const story = useNodeRewards((s) => s.story);
@@ -19,7 +20,7 @@ export default function StoryCard() {
   return (
     <Screen>
       <BackBar title="Story card" />
-      <View style={{ alignItems: "center", paddingHorizontal: 24 }}>
+      <ScrollBody contentContainerStyle={{ alignItems: "center", paddingHorizontal: 24, paddingBottom: 24 }}>
         <View style={{ width: 236, height: 420, borderRadius: 22, backgroundColor: C.deep, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", padding: 22, alignItems: "center" }}>
           <Text style={[t(700, 12, 14), { letterSpacing: 2.4 }]}>NABT</Text>
           <View style={{ marginTop: 18 }}>
@@ -41,7 +42,7 @@ export default function StoryCard() {
           <GoldButton label="Share to Instagram" onPress={() => shareCard(`${story.title}. ${story.line}`)} />
           <GhostButton label="Save image" onPress={() => shareCard(story.title)} />
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

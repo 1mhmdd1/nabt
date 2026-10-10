@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -104,6 +105,7 @@ export default function AssignChair() {
             onPress={() => chosen && changeChair(row.id, chosen.id, chosen.name, reason, row.chair || "")}
           />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

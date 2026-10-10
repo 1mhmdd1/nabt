@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Chip, OutlineButton, StaffFrame } from "../../src/components/staff/StaffChrome";
 import { C, t } from "../../src/theme";
@@ -52,6 +53,7 @@ export default function Perks() {
             </View>
           ))}
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

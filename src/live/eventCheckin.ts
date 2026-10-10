@@ -8,6 +8,7 @@ import { useCommunity } from "./communities";
 import { markEventPresent } from "./nodeRewards";
 import { appOrigin } from "../components/LinkQr";
 import { classify } from "../ml/moderation";
+import { postFn } from "../fn";
 
 export type AttendanceRow = { uid: string; nickname: string; at: number };
 
@@ -75,8 +76,37 @@ export function useOrganizer(circleId: string) {
   return { circle, organizer, verified: Boolean(circle?.verified) };
 }
 
-export function checkInUrl(eventId: string) {
-  return `${appOrigin()}/e/${eventId}/checkin`;
+/**
+ * The organizer of one event: the host Circle's Chair, or Student Affairs for an OSA event.
+ * Only they open Event check-in, show the QR, see who is here, end the event and issue certificates.
+ * The server checks the same rule.
+ */
+export function useEventOrganizer(event: { hostType?: string; hostId?: string } | undefined | null) {
+  const circle = useCampus((s) => (event?.hostType === "circle" && event.hostId ? s.circles[event.hostId] : undefined));
+  const role = useCampus((s) => s.role);
+  if (!event) return false;
+  if (event.hostType === "circle") return Boolean(circle?.chairUid && circle.chairUid === me());
+  return role === "staff";
+}
+
+export function checkInUrl(eventId: string, code?: string) {
+  return `${appOrigin()}/e/${eventId}/checkin${code ? `?code=${encodeURIComponent(code)}` : ""}`;
+}
+
+/** Organizer only. The code that goes in the event's QR. */
+export async function eventCode(eventId: string) {
+  const res = await postFn<{ code?: string }>("/event-code", { eventId });
+  return String(res.code || "");
+}
+
+/** The code typed from under the organizer's QR, when the camera can't scan. Returns the event id. */
+export async function eventByCode(code: string) {
+  const res = await postFn<{ eventId?: string }>("/event-by-code", { code });
+  return String(res.eventId || "");
+}
+
+export async function endEvent(eventId: string) {
+  return postFn<{ issued?: number }>("/end-event", { eventId });
 }
 
 export function nodeCheckInUrl(nodeId: string) {
@@ -143,8 +173,8 @@ export function useEventCopy(eventId: string): EventCopy {
 }
 
 /** Mark the signed-in member present, once, and record it on their Circle talent line. */
-export async function checkInToEvent(eventId: string) {
-  const result = await markEventPresent(eventId);
+export async function checkInToEvent(eventId: string, code: string) {
+  const result = await markEventPresent(eventId, code);
   if (!result.already && result.hostType === "circle" && result.hostId) {
     const circle = useCampus.getState().circles[result.hostId];
     const verified = result.verified || circle?.verified || useCommunity.getState().events.find((e) => e.id === eventId)?.verifiedHost;

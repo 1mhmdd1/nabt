@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -20,7 +21,7 @@ export default function Venues() {
   return (
     <StaffFrame title="Venue requests" chip={`${shown.length} new`} tab="events">
       <Pills items={PILLS} value={pill} onChange={setPill} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         {shown.map((r, i) => (
           <Pressable key={r.id} onPress={() => router.push(`/staff/events/venue/${r.id}` as never)} style={[styles.case, i === 0 && styles.sel]}>
             <View style={styles.r1}>
@@ -34,6 +35,7 @@ export default function Venues() {
           </Pressable>
         ))}
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 10 }]}>Only Chairs send requests: venue + date. Fast-track = Verified Circle. Counts only.</Text>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

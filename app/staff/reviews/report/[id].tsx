@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -38,7 +39,7 @@ export default function ReportReview() {
 
   return (
     <StaffFrame title="Summary" chip={STATUS[report.status] || report.status} back="/staff/reviews/communities" tab="reviews">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 8 }}>
         <Text style={t(700, 22, 28)}>{report.circleName}</Text>
         <Text style={[t(500, 13, 18), { color: C.w64 }]}>{report.semester}</Text>
         <View style={styles.row}>
@@ -67,6 +68,7 @@ export default function ReportReview() {
             <OutlineButton label="Ask for changes" onPress={() => void review("changes")} />
           </>
         ) : null}
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

@@ -7,6 +7,7 @@ import { GoldButton, StaffMark } from "../../src/components/staff/StaffChrome";
 import { C, t } from "../../src/theme";
 import { useSignup } from "../../src/signup";
 import { FnError, requestCode } from "../../src/auth";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 /**
  * Staff sign in like everyone else: UA ID, then the emailed code. The Student Affairs
@@ -44,48 +45,50 @@ export default function StaffSignIn() {
 
   return (
     <Screen bg={C.ground}>
-      <View style={styles.wrap}>
-        <StaffMark width={120} height={82} />
-        <Text style={[t(700, 15, 18), { letterSpacing: 2.4, marginTop: 14 }]}>NABT</Text>
-        <Text style={[t(500, 13, 16), { color: C.w70, marginTop: 6 }]}>Student Affairs</Text>
-        <Text style={[t(700, 26, 32), { marginTop: 34 }]}>Staff sign-in</Text>
-        <View style={{ alignSelf: "stretch", marginTop: 18 }}>
-          <Text style={styles.fl}>UA staff email</Text>
-          <View style={[styles.in, error && { borderColor: C.goldLight }]}>
-            <TextInput
-              value={id}
-              onChangeText={(v) => {
-                setError(null);
-                setId(v.replace(/\D/g, "").slice(0, 9));
-              }}
-              keyboardType="number-pad"
-              inputMode="numeric"
-              placeholder="Your 9-digit ID"
-              placeholderTextColor={C.w40}
-              style={styles.input}
-              accessibilityLabel="UA staff ID"
-              onSubmitEditing={() => void send()}
-              returnKeyType="go"
-            />
-            <Text style={[t(500, 15, 18), { color: C.w64 }]}>@ua.edu.lb</Text>
+      <ScrollBody contentContainerStyle={{ paddingBottom: 24 }}>
+        <View style={styles.wrap}>
+          <StaffMark width={120} height={82} />
+          <Text style={[t(700, 15, 18), { letterSpacing: 2.4, marginTop: 14 }]}>NABT</Text>
+          <Text style={[t(500, 13, 16), { color: C.w70, marginTop: 6 }]}>Student Affairs</Text>
+          <Text style={[t(700, 26, 32), { marginTop: 34 }]}>Staff sign-in</Text>
+          <View style={{ alignSelf: "stretch", marginTop: 18 }}>
+            <Text style={styles.fl}>UA staff email</Text>
+            <View style={[styles.in, error && { borderColor: C.goldLight }]}>
+              <TextInput
+                value={id}
+                onChangeText={(v) => {
+                  setError(null);
+                  setId(v.replace(/\D/g, "").slice(0, 9));
+                }}
+                keyboardType="number-pad"
+                inputMode="numeric"
+                placeholder="Your 9-digit ID"
+                placeholderTextColor={C.w40}
+                style={styles.input}
+                accessibilityLabel="UA staff ID"
+                onSubmitEditing={() => void send()}
+                returnKeyType="go"
+              />
+              <Text style={[t(500, 15, 18), { color: C.w64 }]}>@ua.edu.lb</Text>
+            </View>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View style={{ alignSelf: "stretch", marginTop: 14, opacity: ok && !busy ? 1 : 0.55 }}>
+            <GoldButton label={busy ? "Sending…" : "Send me a sign-in code"} onPress={() => void send()} />
+          </View>
+          <Text style={styles.note}>Staff accounts are created by the Admin. The code goes to your UA inbox.</Text>
+          <View style={styles.lock}>
+            <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+              <Rect x={5} y={10.5} width={14} height={9.5} rx={2.5} stroke="#fff" strokeWidth={1.6} />
+              <Path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" />
+            </Svg>
+            <Text style={[t(500, 11.5, 15), { color: C.w64 }]}>Signs out after 30 min idle</Text>
+          </View>
+          <Text style={[styles.note, { marginTop: 22 }]} onPress={() => router.replace("/login" as never)}>
+            Not staff? <Text style={{ color: C.white, textDecorationLine: "underline" }}>Student sign-in</Text>
+          </Text>
         </View>
-        <View style={{ alignSelf: "stretch", marginTop: 14, opacity: ok && !busy ? 1 : 0.55 }}>
-          <GoldButton label={busy ? "Sending…" : "Send me a sign-in code"} onPress={() => void send()} />
-        </View>
-        <Text style={styles.note}>Staff accounts are created by the Admin. The code goes to your UA inbox.</Text>
-        <View style={styles.lock}>
-          <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-            <Rect x={5} y={10.5} width={14} height={9.5} rx={2.5} stroke="#fff" strokeWidth={1.6} />
-            <Path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="#fff" strokeWidth={1.6} strokeLinecap="round" />
-          </Svg>
-          <Text style={[t(500, 11.5, 15), { color: C.w64 }]}>Signs out after 30 min idle</Text>
-        </View>
-        <Text style={[styles.note, { marginTop: 22 }]} onPress={() => router.replace("/login" as never)}>
-          Not staff? <Text style={{ color: C.white, textDecorationLine: "underline" }}>Student sign-in</Text>
-        </Text>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

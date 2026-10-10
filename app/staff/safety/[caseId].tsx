@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -105,6 +106,7 @@ export default function CaseDetail() {
           </Svg>
           <Text style={[t(600, 12.5, 16), { color: C.w64, textDecorationLine: "underline" }]}>Last resort: reveal identity</Text>
         </Pressable>
+        <NavSpacer />
       </ScrollView>
       {open ? (
         <Sheet title="Last resort: reveal identity">

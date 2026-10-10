@@ -174,7 +174,7 @@ export type Space = {
   slots?: { t: string; label: string; tone: string }[];
 };
 export type Perk = { id: string; order: number; cost?: string; title: string; detail?: string; value?: string; status?: string; kind?: string; partner?: string; chip?: string; progress?: number; target?: number; reward?: string; sub?: string };
-export type Cert = { id: string; order: number; initial: string; name: string; sub: string; verified: boolean };
+export type Cert = { id: string; order: number; initial: string; name: string; sub: string; verified: boolean; issued?: boolean };
 export type RevealRow = { id: string; reason: string; when: string; note: string };
 
 type StaffState = {
@@ -440,7 +440,8 @@ async function openStaff(db: ReturnType<typeof getFirebase>["db"], user: User) {
     });
     watch(collection(db, "circles"), (snap) => {
       fromLive = snap.docs
-        .filter((d) => d.data().kind === "community")
+        // Communities waiting on verification are in Reviews → Verify, not here.
+        .filter((d) => d.data().kind === "community" && d.data().verified === true)
         .map((d) => {
           const data = d.data();
           return {
@@ -610,6 +611,7 @@ export async function approveMeetup(id: string, spot: string) {
     spot,
     approvedBy: staffUid(),
   });
+  await answerMeetupRequest(id, { status: "approved", spot });
 }
 
 export async function declineMeetup(id: string) {
@@ -618,6 +620,15 @@ export async function declineMeetup(id: string) {
     status: "declined",
     approvedBy: staffUid(),
   });
+  await answerMeetupRequest(id, { status: "declined" });
+}
+
+/** The student who proposed sees the answer on their Circle's Space. */
+async function answerMeetupRequest(id: string, answer: Record<string, unknown>) {
+  const { db } = getFirebase();
+  const row = useStaff.getState().meetups.find((m) => m.id === id) as (MeetupRow & { circleId?: string; uid?: string }) | undefined;
+  if (!row?.circleId || !row.uid) return;
+  await setDoc(doc(db, "circles", row.circleId, "meetupRequests", row.uid), answer, { merge: true }).catch(() => undefined);
 }
 
 export async function openSupportChat(id: string) {
@@ -720,6 +731,18 @@ export async function toggleCert(id: string, verified: boolean) {
     verified,
     verifiedBy: staffUid(),
   });
+}
+
+/** Issue every verified role that has no certificate yet. */
+export async function issueCerts(ids: string[]) {
+  const { db } = getFirebase();
+  await Promise.all(ids.map((id) => updateDoc(doc(db, "staffCertificates", id), { issued: true, issuedBy: staffUid() })));
+}
+
+/** Book a slot in a campus space. The space keeps the booking, so the button stays booked. */
+export async function bookSpace(id: string, slot: string) {
+  const { db } = getFirebase();
+  await setDoc(doc(db, "staffBookings", `${id}-${slot}`), { space: id, slot, by: staffUid(), at: Date.now() });
 }
 
 export async function publishEvent(title: string, when: string, place: string, description = "") {

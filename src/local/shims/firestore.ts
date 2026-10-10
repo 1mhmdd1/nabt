@@ -98,8 +98,87 @@ function matches(data: Record<string, unknown>, constraints: Constraint[]) {
 }
 
 function denied(path: string) {
+  // The check-in code lives only with the organizer's QR, never in a client read.
+  if (path === "eventCodes" || path.startsWith("eventCodes/")) return true;
   if (path !== "auditLogs" && !path.startsWith("auditLogs/")) return false;
   return currentAccount()?.claims.admin !== true;
+}
+
+/** Fields only Student Affairs (or the phone's function handlers) may change on a profile. */
+const LOCKED_USER_KEYS = ["role", "roleLabel", "staffRole", "status", "alumni", "classYear", "plant", "gardenCount", "communityRoles"];
+/** Collections written only by Student Affairs. */
+const SA_ONLY = ["accountQueue", "accountDecisions", "staffCertificates", "staffBookings", "staffCommunities", "communityReviews", "chairChanges", "revealRequests", "heldItems", "accommodationStatus", "staffProfile", "staffOverview"];
+/** Written only by the function handlers, never straight from a screen. */
+const HANDLER_ONLY = ["certificates", "certificatePublic", "records", "eventCodes", "auditLogs", "growthEvents"];
+
+function forbid(): never {
+  const err = new Error("Missing or insufficient permissions.") as Error & { code: string };
+  err.code = "permission-denied";
+  throw err;
+}
+
+/**
+ * The phone demo's stand-in for firestore.rules on writes. The screens hide what a role
+ * can't do; this makes sure the store refuses it too.
+ */
+function guardWrite(path: string, data: Record<string, unknown> | null) {
+  const account = currentAccount();
+  if (!account) forbid();
+  const claims = account.claims || {};
+  const staff = claims.sa === true || claims.counselor === true || claims.admin === true;
+  const parts = path.split("/");
+  const top = parts[0];
+  const keys = data ? Object.keys(data) : [];
+  if (HANDLER_ONLY.includes(top)) forbid();
+  if (SA_ONLY.includes(top) && !staff) forbid();
+  if (top === "users" && parts.length === 2) {
+    if (parts[1] !== account.uid && !staff) forbid();
+    if (!staff && keys.some((k) => LOCKED_USER_KEYS.includes(k))) forbid();
+  }
+  if (top === "users" && parts.length > 2 && parts[1] !== account.uid && !staff) forbid();
+  if (top === "events") {
+    // Attendance is written only after the organizer's QR code checks out.
+    if (parts[2] === "attendance") forbid();
+    if (parts.length === 2 && !staff) {
+      const event = readDoc(path);
+      const chair = event && event.hostType === "circle" && String(readDoc(`circles/${String(event.hostId || "")}`)?.chairUid || "") === account.uid;
+      if (!chair || keys.some((k) => k !== "screenDescription")) forbid();
+    }
+  }
+  if (top === "circles" && parts.length === 2 && !staff) {
+    // Verified, the Chair and the official line are Student Affairs decisions.
+    if (keys.some((k) => ["verified", "chairUid", "chairName", "officialLine", "kind"].includes(k))) forbid();
+  }
+  const chairOf = (circleId: unknown) => String(readDoc(`circles/${String(circleId || "")}`)?.chairUid || "") === account.uid;
+  if (top === "announcements" && !staff) {
+    // A Chair posts to their own Circle only, never as verified Student Affairs news.
+    if (data?.audience !== "circle" || data?.verified === true || !chairOf(data?.circleId)) forbid();
+  }
+  if (top === "activityReports" && parts.length === 2 && !staff) {
+    const circleId = data?.circleId ?? readDoc(path)?.circleId;
+    if (!chairOf(circleId)) forbid();
+  }
+  if (top === "venueRequests" && parts.length === 2 && !staff) {
+    if (!chairOf(data?.circleId ?? readDoc(path)?.circleId) || (data?.status != null && data.status !== "sent")) forbid();
+  }
+  if ((top === "petitions" || top === "staffMeetups") && parts.length === 2 && !staff && readDoc(path)) {
+    // Students sign or propose. Only Student Affairs answers.
+    if (keys.some((k) => k !== "signCount")) forbid();
+  }
+  // Your own line, your own meetup request.
+  if (top === "circles" && (parts[2] === "meetupRequests" || parts[4] === "answers" || parts[4] === "votes") && parts[parts.length - 1] !== account.uid && !staff) forbid();
+  if (top === "staffMeetups" && !staff && !readDoc(path) && data?.uid !== account.uid) forbid();
+  // Only an account Student Affairs graduated to alumni can offer mentoring.
+  if (top === "alumniMentors" && claims.alumni !== true) forbid();
+  // Only the author deletes or edits a chat message.
+  if ((top === "circles" || top === "chats") && parts[2] === "messages" && parts.length === 4) {
+    const existing = readDoc(path);
+    if (existing && String(existing.authorUid || "") !== account.uid && (data === null || keys.some((k) => k !== "thankedBy" && k !== "votes"))) forbid();
+  }
+  if (top === "circles" && parts[2] === "members" && !staff) {
+    const roles = data?.roles;
+    if (Array.isArray(roles) && roles.length > 0) forbid();
+  }
 }
 
 function docSnap(path: string) {
@@ -192,12 +271,14 @@ export async function getDocs(ref: Ref) {
 export async function setDoc(ref: Ref, data: Record<string, unknown>, opts?: { merge?: boolean }) {
   await whenReady();
   if (ref.kind !== "doc") throw new Error("setDoc needs a document.");
+  guardWrite(ref.path, data);
   writeDoc(ref.path, data, Boolean(opts?.merge));
 }
 
 export async function updateDoc(ref: Ref, data: Record<string, unknown>) {
   await whenReady();
   if (ref.kind !== "doc") throw new Error("updateDoc needs a document.");
+  guardWrite(ref.path, data);
   patchDoc(ref.path, data);
 }
 
@@ -206,6 +287,7 @@ export async function addDoc(col: Ref, data: Record<string, unknown>) {
   if (col.kind !== "collection") throw new Error("addDoc needs a collection.");
   const id = autoId();
   const path = `${col.path}/${id}`;
+  guardWrite(path, data);
   writeDoc(path, data, false);
   return { id, path };
 }
@@ -213,5 +295,6 @@ export async function addDoc(col: Ref, data: Record<string, unknown>) {
 export async function deleteDoc(ref: Ref) {
   await whenReady();
   if (ref.kind !== "doc") return;
+  guardWrite(ref.path, null);
   removeDoc(ref.path);
 }

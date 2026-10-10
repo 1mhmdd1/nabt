@@ -7,57 +7,38 @@ import { SignupScreen } from "../src/components/Signup";
 import { GoldButton } from "../src/components/Chrome";
 import { C, t } from "../src/theme";
 import { useSignup } from "../src/signup";
-import { FnError } from "../src/auth";
+import { FnError, requestCode } from "../src/auth";
 import { markIntroSeen } from "../src/intro";
-import { idYear, isUaId } from "../src/local/ids";
-import { DEMO_PASSWORD } from "../src/local/mode";
+import { isUaId } from "../src/local/ids";
 import { resetDemo } from "../src/local/store";
-import { signInDemo } from "../src/local/session";
 
-function loginOk(value: string) {
+/** A UA ID, or the campus admin's "admin". The @ua.edu.lb part is fixed. */
+function idOk(value: string) {
   const raw = value.trim().toLowerCase();
-  if (!raw) return false;
-  if (raw.includes("@")) {
-    if (raw === "admin@ua.edu.lb") return true;
-    const local = raw.split("@")[0] || "";
-    return isUaId(local);
-  }
-  return isUaId(raw);
+  return raw === "admin" || isUaId(raw);
 }
 
 export default function Login() {
   const [id, setId] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const digits = id.replace(/\D/g, "");
-  const yearError = digits.length === 9 && !id.includes("@") && !isUaId(digits) ? `A UA ID uses a year from 2019 through ${new Date().getFullYear()}, then 5 digits.` : null;
-  const ok = loginOk(id) && password.length > 0;
+  const yearError = digits.length === 9 && !isUaId(digits) ? `A UA ID uses a year from 2019 through ${new Date().getFullYear()}, then 5 digits.` : null;
+  const ok = idOk(id);
 
+  // No password: the server sends a 6-digit code to <ID>@ua.edu.lb, and the next screen checks it.
   async function send() {
     if (busy || !ok) return;
     setBusy(true);
     setError(null);
     try {
-      const result = await signInDemo(id, password);
+      useSignup.getState().reset();
+      useSignup.getState().setStudentId(id.trim().toLowerCase());
+      await requestCode("login");
       await markIntroSeen();
-      if (result.claims.sa === true) {
-        router.replace("/staff/overview" as never);
-        return;
-      }
-      if (result.claims.admin === true || result.role === "admin") {
-        router.replace("/admin/log" as never);
-        return;
-      }
-      if (!result.nickname && result.role === "student") {
-        useSignup.getState().reset();
-        useSignup.getState().setStudentId(result.studentId);
-        router.replace("/signup/nickname" as never);
-        return;
-      }
-      router.replace("/home" as never);
+      router.push("/signup/email?mode=login" as never);
     } catch (err) {
-      setError(err instanceof FnError ? err.message : err instanceof Error ? err.message : "Could not sign in.");
+      setError(err instanceof FnError && err.status === 0 ? "Can’t reach the campus server." : err instanceof Error ? err.message : "Could not send a code.");
     } finally {
       setBusy(false);
     }
@@ -73,7 +54,6 @@ export default function Login() {
             void resetDemo();
             setError("Demo data reset.");
             setId("");
-            setPassword("");
           }}
         >
           <SvgXml xml={loginBrandSvg} width={88} height={62} />
@@ -88,46 +68,33 @@ export default function Login() {
           value={id}
           onChangeText={(v) => {
             setError(null);
-            setId(v.slice(0, 40));
+            // Only the ID part is typed; the domain is fixed.
+            const local = v.split("@")[0] || "";
+            setId(local.replace(/[^a-zA-Z0-9]/g, "").slice(0, 12));
           }}
           autoCapitalize="none"
           autoCorrect={false}
-          keyboardType="email-address"
-          placeholder="ID or UA email"
+          keyboardType="number-pad"
+          placeholder="Your ID number"
           placeholderTextColor={C.w40}
           style={styles.input}
-          accessibilityLabel="UA email"
+          accessibilityLabel="UA ID"
           onSubmitEditing={() => void send()}
-          returnKeyType="next"
+          returnKeyType="send"
         />
+        <View style={styles.domainChip}>
+          <Text style={styles.domain} accessibilityLabel="at ua.edu.lb, fixed">
+            @ua.edu.lb
+          </Text>
+        </View>
       </View>
       {yearError ? <Text style={styles.error}>{yearError}</Text> : null}
-      {id && isUaId(id.replace(/\D/g, "")) && !id.includes("@") ? <Text style={styles.note}>{idYear(id)} · {id.replace(/\D/g, "")}@ua.edu.lb</Text> : null}
-      <Text style={[styles.k, { marginTop: 16 }]}>Password</Text>
-      <View style={[styles.emf, error && { borderColor: C.goldLight }]}>
-        <TextInput
-          value={password}
-          onChangeText={(v) => {
-            setError(null);
-            setPassword(v);
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Password"
-          placeholderTextColor={C.w40}
-          style={styles.input}
-          accessibilityLabel="Password"
-          onSubmitEditing={() => void send()}
-          returnKeyType="go"
-        />
-      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.foot}>
         <View style={{ opacity: ok && !busy ? 1 : 0.55 }}>
-          <GoldButton label={busy ? "Signing in…" : "Sign in"} disabled={!ok || busy} onPress={() => void send()} />
+          <GoldButton label={busy ? "Sending your code…" : "Send me a sign-in code"} disabled={!ok || busy} onPress={() => void send()} />
         </View>
-        <Text style={styles.note}>Demo password {DEMO_PASSWORD}. Hold the logo to reset.</Text>
+        <Text style={styles.note}>No password. We email you a 6-digit code.</Text>
         <Text style={styles.newHere}>
           New here?{" "}
           <Text style={styles.link} onPress={() => router.push("/signup/scan" as never)}>
@@ -148,7 +115,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     height: 54,
     paddingLeft: 18,
-    paddingRight: 14,
+    paddingRight: 6,
     borderRadius: 18,
     backgroundColor: C.raised,
     borderWidth: 1.5,
@@ -157,7 +124,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  input: { flex: 1, ...t(600, 17, 20), color: C.white, letterSpacing: 0.3, padding: 0 },
+  input: { flex: 1, minWidth: 0, ...t(600, 17, 20), color: C.white, letterSpacing: 0.3, padding: 0 },
+  domainChip: { flexShrink: 0, height: 40, paddingHorizontal: 12, borderRadius: 14, backgroundColor: C.deep, justifyContent: "center" },
+  domain: { ...t(600, 15, 18), color: C.w80 },
   error: { marginTop: 10, ...t(500, 13, 18), color: C.goldLight },
   foot: { marginTop: "auto", paddingBottom: 40 },
   note: { marginTop: 14, textAlign: "center", ...t(500, 12, 16), color: C.w64 },

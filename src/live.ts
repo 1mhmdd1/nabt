@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -51,7 +52,12 @@ export type ChatMsg = {
   kindnessClosed?: boolean;
   replyTo?: string;
   reactions?: { icon: "heart" | "root"; label: string; mine?: boolean }[];
+  thankedBy?: string[];
+  attachment?: ChatAttachment;
+  poll?: { question: string; options: string[] };
 };
+
+export type ChatAttachment = { type: "photo" | "video" | "document"; uri: string; name: string; size?: number; mimeType?: string; width?: number; height?: number };
 
 export type Answer = { id: string; displayName: string; initial: string; text: string; order: number };
 export type Reply = {
@@ -79,6 +85,7 @@ export type Meetup = {
   selected: string;
   note: string;
   approvedLine: string;
+  proposedBy: string;
 };
 export type CircleDoc = {
   id: string;
@@ -164,7 +171,7 @@ type CampusState = {
   badges: { id: string; name: string; order?: number }[];
   today: { title: string; body: string } | null;
   dropGoing: boolean;
-  rootNote: { title: string; body: string; action: string; badge: string; href?: string; circleId?: string; replyId?: string } | null;
+  rootNote: { id: string; title: string; body: string; action: string; badge: string; href?: string; circleId?: string; replyId?: string; thankedBack?: boolean } | null;
   going: string[];
   blocked: string[];
   campus: CampusItem[];
@@ -512,14 +519,17 @@ function attachCampus(db: ReturnType<typeof getFirebase>["db"], uid: string) {
 
     watch(query(collection(db, "growthEvents"), where("uid", "==", uid)), (snap) => {
       const roots = snap.docs
-        .map((d) => d.data())
-        .filter((d) => d.kind === "root" && d.source === "thanks" && d.title);
+        .map((d) => ({ id: d.id, ...d.data() }) as Record<string, unknown> & { id: string })
+        .filter((d) => d.kind === "root" && d.source === "thanks" && d.title)
+        .sort((a, b) => millis(b.at) - millis(a.at));
       const note = roots[0];
       const circleId = note?.circleId ? String(note.circleId) : "";
       const replyId = note?.replyId ? String(note.replyId) : "";
       useCampus.setState({
         rootNote: note
           ? {
+              id: note.id,
+              thankedBack: note.thankedBack === true,
               title: String(note.title),
               body: String(note.body || ""),
               action: String(note.action || ""),
@@ -701,6 +711,9 @@ function watchCircle(db: ReturnType<typeof getFirebase>["db"], id: string) {
         kindnessClosed: data.kindnessClosed === true,
         replyTo: data.replyTo ? String(data.replyTo) : undefined,
         reactions: data.reactions as ChatMsg["reactions"],
+        thankedBy: Array.isArray(data.thankedBy) ? (data.thankedBy as string[]) : undefined,
+        attachment: data.attachment ? (data.attachment as ChatAttachment) : undefined,
+        poll: data.poll ? (data.poll as ChatMsg["poll"]) : undefined,
       } satisfies ChatMsg;
     });
     useCampus.setState((s) => ({ messages: { ...s.messages, [id]: messages } }));
@@ -789,6 +802,7 @@ function watchCircleContent(db: ReturnType<typeof getFirebase>["db"], id: string
             selected: String(data.selected || ""),
             note: String(data.note || ""),
             approvedLine: String(data.approvedLine || ""),
+            proposedBy: String(data.proposedBy || ""),
           }
         : null,
     });
@@ -836,6 +850,70 @@ export async function sendCircleMessage(circleId: string, text: string, extra?: 
   return ref.id;
 }
 
+/**
+ * A photo, video or document from this phone. The caption and file name go through the same
+ * on-phone safety check as a message, so phone numbers, links and blocked words still don't send.
+ */
+export async function sendCircleAttachment(circleId: string, attachment: ChatAttachment, caption = "") {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  const text = caption.trim();
+  if (text) assertSendable(text, "circle", safetyAnon());
+  if (attachment.type === "document") assertSendable(attachment.name.replace(/\.[a-z0-9]{1,5}$/i, ""), "circle", safetyAnon());
+  const self = useCampus.getState();
+  const ref = await addDoc(collection(db, "circles", circleId, "messages"), {
+    authorUid: uid,
+    authorNickname: self.greetingName || self.nickname || "A student",
+    text: text.slice(0, 500),
+    kind: attachment.type === "document" ? "file" : "media",
+    attachment,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/** A poll: one question and two to four choices, each checked like a message. */
+export async function sendCirclePoll(circleId: string, question: string, options: string[]) {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  const q = question.trim();
+  const opts = options.map((o) => o.trim()).filter(Boolean).slice(0, 4);
+  if (!q) throw new Error("Ask a question first.");
+  if (opts.length < 2) throw new Error("Add at least two choices.");
+  if (new Set(opts.map((o) => o.toLowerCase())).size !== opts.length) throw new Error("Each choice needs to be different.");
+  for (const line of [q, ...opts]) assertSendable(line, "circle", safetyAnon());
+  const self = useCampus.getState();
+  const ref = await addDoc(collection(db, "circles", circleId, "messages"), {
+    authorUid: uid,
+    authorNickname: self.greetingName || self.nickname || "A student",
+    text: q.slice(0, 200),
+    kind: "poll",
+    poll: { question: q.slice(0, 200), options: opts.map((o) => o.slice(0, 60)) },
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/** One vote per person. Voting again moves your vote. */
+export async function votePoll(circleId: string, messageId: string, option: number) {
+  const { db } = getFirebase();
+  const uid = me();
+  if (!uid) throw new Error("Sign in first.");
+  await setDoc(doc(db, "circles", circleId, "messages", messageId, "votes", uid), { option, at: serverTimestamp() });
+}
+
+/** "Thank them back" right where the note is. It grows a root for both people. */
+export async function thankBack(eventId: string) {
+  await postFn("/thanks-back", { eventId });
+}
+
+/** Answering a kindness card is helping, so it grows a root. */
+export async function answerKindness(circleId: string, messageId: string) {
+  await postFn("/kindness-reply", { circleId, messageId });
+}
+
 export async function closeKindness(circleId: string, messageId: string) {
   const { db } = getFirebase();
   await updateDoc(doc(db, "circles", circleId, "messages", messageId), { kindnessClosed: true });
@@ -852,6 +930,12 @@ export async function reportMessage(where: { circleId?: string; chatId?: string;
     chatId: where.chatId || "",
     at: serverTimestamp(),
   });
+}
+
+/** Your own message only. */
+export async function deleteCircleMessage(circleId: string, messageId: string) {
+  const { db } = getFirebase();
+  await deleteDoc(doc(db, "circles", circleId, "messages", messageId));
 }
 
 export async function blockAuthor(blockedUid: string, where: { circleId?: string; messageId?: string }) {
@@ -956,9 +1040,9 @@ export async function answerChatRequest(id: string, status: "accepted" | "declin
   await updateDoc(doc(db, "chatRequests", id), { status });
 }
 
-export async function recordCheckIn() {
+export async function recordCheckIn(source: "mood" | "voice" = "mood") {
   try {
-    await postFn("/check-in", {});
+    await postFn("/check-in", { source });
   } catch {
     throw new Error("Check-in could not update the plant.");
   }
@@ -973,10 +1057,12 @@ export async function postPromptAnswer(circleId: string, text: string) {
   assertSendable(body, "circle", safetyAnon());
   const self = useCampus.getState();
   await setDoc(doc(db, "circles", circleId, "prompts", "today", "answers", uid), {
+    authorUid: uid,
     text: body.slice(0, 200),
     displayName: self.greetingName || self.nickname,
     initial: self.initial,
-    order: 0,
+    order: Date.now(),
+    day: new Date().toDateString(),
     createdAt: serverTimestamp(),
   });
 }

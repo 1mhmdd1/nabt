@@ -4,6 +4,7 @@ import { Screen } from "../../src/components/Chrome";
 import { Gate, Top, useScreen } from "../../src/components/voice/Kit";
 import { declineAndMaybeSignal } from "../../src/voice/session";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = { note: string; bubble: string; sys: string; reply: string; mine: string; saved: string; savedBody: string; composer: string };
 
@@ -24,7 +25,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title="Student Affairs (counselor)" />
-      <View style={{ paddingHorizontal: 20 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.note}>
           <Text style={styles.noteText}>{copy.note}</Text>
         </View>
@@ -38,7 +39,7 @@ function Body() {
           <Text style={t(600, 13.5, 18)}>{copy.saved}</Text>
           <Text style={styles.saved}>{copy.savedBody}</Text>
         </View>
-      </View>
+      </ScrollBody>
       <View style={styles.cmp}>
         <Text style={styles.ph}>{copy.composer}</Text>
       </View>

@@ -1,31 +1,63 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Screen } from "../../../src/components/Chrome";
 import { FloatingNav } from "../../../src/components/Nav";
-import { IconBack, IconCheck, IconChevronDown, IconClock, IconMore, IconRootGold, IconSendUp, IconShield, IconShieldCheck } from "../../../src/components/Icons";
+import { IconBack, IconCheck, IconChevronDown, IconClock, IconRootGold, IconSendUp, IconShield, IconShieldCheck } from "../../../src/components/Icons";
 import { C, t } from "../../../src/theme";
 import { useNabt } from "../../../src/state";
 import { OutgoingHalt } from "../../../src/moderation/outgoing";
-import { me, postPromptAnswer, postThreadReply, thankReply, useCampus, type Member } from "../../../src/live";
+import { me, postThreadReply, reportMessage, thankReply, useCampus, type Member } from "../../../src/live";
+import { toast } from "../../../src/toast";
+import { meetupSlots, postSpaceLine, requestMeetup, useSpace } from "../../../src/live/space";
 import { writeSafetySignal } from "../../../src/live/voiceSafety";
 import { joinCommunity, leaveCommunity } from "../../../src/live/communities";
 
 export default function CircleSpace() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const circleId = String(id || "");
   const [open, setOpen] = useState(false);
   const [line, setLine] = useState("");
   const [reply, setReply] = useState("");
-  const [kind, setKind] = useState("Quiet sit");
-  const [proposed, setProposed] = useState(false);
+  const [kind, setKind] = useState("");
+  const [slotAt, setSlotAt] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [joining, setJoining] = useState(false);
   const setCaution = useNabt((s) => s.setCaution);
   const caution = useNabt((s) => s.caution);
   const campus = useCampus();
-  const circle = campus.circles[String(id)] || campus.circles["exam-week"];
-  const members = campus.members[String(id)] || campus.members["exam-week"] || [];
-  const title = circle?.name || "";
-  const wall = campus.answers;
+  const space = useSpace(circleId);
+  const circle = campus.circles[circleId];
+  const members = campus.members[circleId] || [];
   const mine = members.some((m) => m.id === me());
+  const slots = meetupSlots();
+  const slot = slots[slotAt % slots.length];
+  const meetup = space.meetup;
+  const chosen = kind || meetup?.selected || "Quiet sit";
+  const request = space.request;
+
+  // Reading is open to everyone. Posting, thanking and proposing are for members.
+  const asMember = (run: () => Promise<void>) => {
+    if (!mine) {
+      setCaution("Join the Circle to post here.");
+      return;
+    }
+    void (async () => {
+      try {
+        await run();
+        setCaution(null);
+      } catch (err) {
+        if (err instanceof OutgoingHalt && err.action === "support") {
+          setCaution(null);
+          if (err.signal) void writeSafetySignal(err.signal).catch(() => undefined);
+          router.push("/support" as never);
+          return;
+        }
+        setCaution(err instanceof Error ? err.message : "That stayed here.");
+      }
+    })();
+  };
 
   if (!campus.ready) {
     return (
@@ -37,33 +69,16 @@ export default function CircleSpace() {
 
   return (
     <Screen>
-      <Header title={title} sub={`Circle · ${circle?.memberCount ?? members.length} members`} members={members} circleId={String(id || "")} />
+      <Header title={circle?.name || "Circle"} sub={`Circle · ${circle?.memberCount ?? members.length} members`} members={members} circleId={circleId} joined={mine} />
       <View style={styles.modRow}>
         <IconShield size={12} color={C.w64} />
-        <Text style={styles.mod}>{circle?.modLine}</Text>
+        <Text style={styles.mod}>{circle?.modLine || "Moderated by a campus counselor · nicknames only"}</Text>
       </View>
-      <Seg active="space" id={String(id)} />
-      {!mine ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Join Circle"
-          onPress={() => void joinCommunity(String(id || ""), {
-            nickname: campus.nickname || campus.greetingName,
-            realName: campus.fullName,
-            uaEmail: campus.email,
-            phone: "",
-          }).then((result) => {
-            if (result === "joined") router.replace(`/circle/${id}/chat?joined=1` as never);
-          })}
-          style={{ marginHorizontal: 20, marginTop: 12, height: 48, borderRadius: 999, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" }}
-        >
-          <Text style={[t(700, 15, 18), { color: C.burgundy }]}>Join Circle</Text>
-        </Pressable>
-      ) : null}
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 8 }}>
+      <Seg active="space" id={circleId} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 8 }} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
-          <Text style={styles.eye}>{circle?.promptMeta}</Text>
-          <Text style={styles.q}>{circle?.prompt}</Text>
+          <Text style={styles.eye}>{circle?.promptMeta || "Today’s prompt · clears tomorrow"}</Text>
+          <Text style={styles.q}>{circle?.prompt || "What would make today lighter?"}</Text>
           <View style={styles.one}>
             <TextInput
               value={line}
@@ -74,37 +89,21 @@ export default function CircleSpace() {
               maxLength={80}
               accessibilityLabel="Your one line"
             />
-            <Pressable
-              accessibilityLabel="Post your line"
-              onPress={() => {
-                void (async () => {
-                  try {
-                    if (line.trim()) await postPromptAnswer(String(id), line.trim());
-                    setLine("");
-                    setCaution(null);
-                  } catch (err) {
-                    if (err instanceof OutgoingHalt && err.action === "support") {
-                      setCaution(null);
-                      if (err.signal) void writeSafetySignal(err.signal).catch(() => undefined);
-                      router.push("/support" as never);
-                      return;
-                    }
-                    setCaution(err instanceof Error ? err.message : "That line stayed here.");
-                  }
-                })();
-              }}
-              style={styles.post}
-            >
+            <Pressable accessibilityRole="button" accessibilityLabel="Post your line" onPress={() => asMember(async () => {
+              await postSpaceLine(circleId, line);
+              setLine("");
+            })} style={styles.post}>
               <IconSendUp color={C.white} />
             </Pressable>
           </View>
           {caution ? <Text style={styles.warn}>{caution}</Text> : null}
           <View style={{ marginTop: 10, gap: 6 }}>
-            {wall.map((a) => (
+            {space.lines.length === 0 ? <Text style={styles.noteText}>No lines yet today.</Text> : null}
+            {space.lines.map((a) => (
               <View key={a.id} style={styles.note}>
                 <Mini letter={a.initial} />
-                <Text style={styles.noteText} numberOfLines={1}>
-                  <Text style={{ color: C.white, fontWeight: "600" }}>{a.displayName} </Text>
+                <Text style={styles.noteText}>
+                  <Text style={{ color: C.white, fontWeight: "600" }}>{a.mine ? "You" : a.displayName} </Text>
                   {a.text}
                 </Text>
               </View>
@@ -112,65 +111,129 @@ export default function CircleSpace() {
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.eye}>Hope Thread</Text>
-          {campus.thread ? (
-            <>
-              <View style={styles.postHead}>
-                <Mini letter={campus.thread.initial} size={32} font={13} />
-                <View style={styles.who}>
-                  <Text style={t(600, 14, 17)}>{campus.thread.nickname}</Text>
-                  {campus.thread.mode ? (
-                    <View style={styles.mode}>
-                      <Text style={styles.modeT}>{campus.thread.mode}</Text>
-                    </View>
-                  ) : null}
-                  <Text style={styles.when}>{campus.thread.when}</Text>
-                </View>
-                <IconMore />
+        {space.thread ? (
+          <View style={styles.card}>
+            <Text style={styles.eye}>Hope thread</Text>
+            <View style={styles.postHead}>
+              <Mini letter={space.thread.initial} size={32} font={13} />
+              <View style={styles.who}>
+                <Text style={t(600, 14, 17)}>{space.thread.nickname}</Text>
+                {space.thread.mode ? (
+                  <View style={styles.mode}>
+                    <Text style={styles.modeT}>{space.thread.mode}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.when}>{space.thread.when}</Text>
               </View>
-              <Text style={styles.postText}>{campus.thread.text}</Text>
-              <View style={styles.replies}>
-                {campus.replies.map((r) => (
-                  <Reply key={r.id} letter={r.initial} name={r.nickname} when={r.when} text={r.text} done={r.done || "+1 root"} action={r.authorUid && r.authorUid !== me() ? "Thanks" : undefined} onAction={r.authorUid && r.authorUid !== me() ? () => void thankReply({ circleId: String(id), threadId: "hope", replyId: r.id }) : undefined} />
-                ))}
-              </View>
+            </View>
+            <Text style={styles.postText}>{space.thread.text}</Text>
+            <View style={styles.replies}>
+              {space.replies.map((r) => {
+                const thankedByMe = r.thankedBy.includes(me());
+                const canThank = Boolean(r.authorUid) && r.authorUid !== me() && !thankedByMe;
+                return (
+                  <Reply
+                    key={r.id}
+                    letter={r.initial}
+                    name={r.authorUid === me() ? "You" : r.nickname}
+                    when={r.when}
+                    text={r.text}
+                    done={r.thankedBy.length ? (thankedByMe ? "You thanked them · +1 root for both" : "Thanked · +1 root for both") : undefined}
+                    action={canThank ? "Thanks" : undefined}
+                    onAction={canThank ? () => asMember(() => thankReply({ circleId, threadId: "hope", replyId: r.id })) : undefined}
+                  />
+                );
+              })}
+            </View>
+            <View style={[styles.one, { marginTop: 12 }]}>
               <TextInput value={reply} onChangeText={setReply} placeholder="Add your reply" placeholderTextColor={C.w64} style={styles.input} accessibilityLabel="Add your reply" />
-              <Pressable accessibilityRole="button" accessibilityLabel="Post reply" onPress={() => void postThreadReply(String(id), "hope", reply).then(() => setReply("")).catch((err: unknown) => setCaution(err instanceof Error ? err.message : "Reply stayed here."))}>
-                <Text style={t(600, 13, 16)}>Post reply</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Post reply" onPress={() => asMember(async () => {
+                await postThreadReply(circleId, "hope", reply);
+                setReply("");
+              })} style={styles.post}>
+                <IconSendUp color={C.white} />
               </Pressable>
-            </>
-          ) : null}
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.meetHead}>
-            <Text style={t(600, 15, 20)}>{campus.meetup?.title}</Text>
-            <View style={styles.time}>
-              <IconClock />
-              <Text style={t(600, 12.5, 13)}>{campus.meetup?.whenLabel}</Text>
-              <IconChevronDown />
             </View>
           </View>
-          <View style={styles.pills}>
-            {(campus.meetup?.kinds || []).map((p) => (
-              <Pressable key={p} onPress={() => setKind(p)} style={[styles.pill, (kind || campus.meetup?.selected) === p && styles.pillOn]}>
-                <Text style={[t(600, 12.5, 13), { color: (kind || campus.meetup?.selected) === p ? C.burgundy : C.w80 }]}>{p}</Text>
+        ) : null}
+
+        {meetup ? (
+          <View style={styles.card}>
+            <View style={styles.meetHead}>
+              <Text style={[t(600, 15, 20), { flexShrink: 1 }]}>{meetup.title}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Meetup time ${request ? request.whenLabel : slot.label}. Tap for another time`}
+                disabled={Boolean(request)}
+                onPress={() => setSlotAt((v) => v + 1)}
+                style={styles.time}
+              >
+                <IconClock />
+                <Text style={t(600, 12.5, 13)}>{request ? request.whenLabel : slot.label}</Text>
+                {request ? null : <IconChevronDown />}
               </Pressable>
-            ))}
+            </View>
+            <View style={styles.pills}>
+              {meetup.kinds.map((p) => {
+                const on = (request ? request.kind : chosen) === p;
+                return (
+                  <Pressable key={p} accessibilityRole="button" accessibilityState={{ selected: on }} disabled={Boolean(request)} onPress={() => setKind(p)} style={[styles.pill, on && styles.pillOn]}>
+                    <Text style={[t(600, 12.5, 13), { color: on ? C.burgundy : C.w80 }]}>{p}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.meetRow}>
+              <IconShield size={16} color={C.w64} />
+              <Text style={styles.muted}>{meetup.note}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={request ? "Meetup sent to Student Affairs" : "Propose a meetup"}
+              disabled={Boolean(request) || sending}
+              onPress={() => {
+                setSending(true);
+                asMember(() => requestMeetup(circleId, chosen, slot).finally(() => setSending(false)));
+                if (!mine) setSending(false);
+              }}
+              style={[styles.propose, request && styles.proposeSent]}
+            >
+              <Text style={[t(700, 15, 15), { color: request ? C.white : C.burgundy, letterSpacing: 0.15 }]}>
+                {request ? (request.status === "approved" ? "Approved by Student Affairs" : request.status === "declined" ? "Student Affairs declined" : "Sent to Student Affairs") : "Propose a meetup"}
+              </Text>
+            </Pressable>
+            {meetup.approvedLine ? (
+              <View style={styles.approvedRow}>
+                <IconCheck size={16} />
+                <Text style={styles.approved}>{meetup.approvedLine}</Text>
+              </View>
+            ) : null}
           </View>
-          <View style={styles.meetRow}>
-            <IconShield size={16} color={C.w64} />
-            <Text style={styles.muted}>{campus.meetup?.note}</Text>
-          </View>
-          <Pressable accessibilityRole="button" onPress={() => setProposed(true)} style={styles.propose}>
-            <Text style={[t(700, 15, 15), { color: C.burgundy, letterSpacing: 0.15 }]}>{proposed ? "Sent to Student Affairs" : "Propose meetup"}</Text>
+        ) : null}
+
+        {!mine ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Join Circle"
+            disabled={joining}
+            onPress={() => {
+              setJoining(true);
+              void joinCommunity(circleId, {
+                nickname: campus.nickname || campus.greetingName,
+                realName: campus.fullName,
+                uaEmail: campus.email,
+                phone: "",
+              })
+                .then(() => setCaution(null))
+                .catch((err: unknown) => setCaution(err instanceof Error ? err.message : "Could not join."))
+                .finally(() => setJoining(false));
+            }}
+            style={styles.joinBtn}
+          >
+            <Text style={[t(700, 15, 18), { color: C.burgundy }]}>{joining ? "Joining…" : "Join Circle"}</Text>
           </Pressable>
-          <View style={styles.approvedRow}>
-            <IconCheck size={16} />
-            <Text style={styles.approved}>{campus.meetup?.approvedLine}</Text>
-          </View>
-        </View>
+        ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" quiet open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
@@ -183,12 +246,14 @@ export function Header({
   here,
   members = [],
   circleId = "",
+  joined = true,
 }: {
   title: string;
   sub: string;
   here?: string;
   members?: Member[];
   circleId?: string;
+  joined?: boolean;
 }) {
   const [safety, setSafety] = useState(false);
   const [reported, setReported] = useState(false);
@@ -198,31 +263,51 @@ export function Header({
         <IconBack />
       </Pressable>
       <View style={{ flex: 1 }}>
-        <Text style={t(600, 18, 22)}>{title}</Text>
+        <Text style={t(600, 18, 22)} numberOfLines={1}>{title}</Text>
         <View style={styles.subRow}>
-          <Text style={styles.sub}>{sub}</Text>
+          <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
           {here ? <View style={styles.hereDot} /> : null}
           {here ? <Text style={styles.sub}>{here}</Text> : null}
         </View>
       </View>
       <View style={styles.members}>
-        {members.map((m) => (
+        {members.slice(0, 4).map((m) => (
           <View key={m.id} style={styles.av}>
             <Text style={[t(600, 10, 10), { color: C.gold }]}>{m.initial}</Text>
           </View>
         ))}
+        {members.length > 4 ? (
+          <View style={styles.av}>
+            <Text style={[t(600, 9, 10), { color: C.white }]}>+{members.length - 4}</Text>
+          </View>
+        ) : null}
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Safety: report, block or leave" onPress={() => setSafety((v) => !v)} style={styles.icon}>
         <IconShieldCheck size={20} />
       </Pressable>
       {safety ? (
         <View style={styles.safety}>
-          <Pressable accessibilityRole="button" onPress={() => { setReported(true); setSafety(false); }}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={reported}
+            onPress={() => {
+              // A report goes to Student Affairs as a count with the Circle. Nobody reads the chat.
+              void reportMessage({ circleId, messageId: "" })
+                .then(() => {
+                  setReported(true);
+                  toast("Report sent to Student Affairs");
+                })
+                .catch((err: unknown) => toast(err instanceof Error ? err.message : "Report did not send."))
+                .finally(() => setSafety(false));
+            }}
+          >
             <Text style={t(600, 13, 16)}>{reported ? "Report sent" : "Report this Circle"}</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Leave" onPress={() => void leaveCommunity(circleId).then(() => router.replace("/chats" as never))}>
-            <Text style={t(600, 13, 16)}>Leave</Text>
-          </Pressable>
+          {joined ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Leave" onPress={() => void leaveCommunity(circleId).then(() => router.replace("/chats" as never))}>
+              <Text style={t(600, 13, 16)}>Leave</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -230,6 +315,7 @@ export function Header({
 }
 
 export function Seg({ active, id }: { active: "space" | "chat"; id: string }) {
+  const unread = useCampus((s) => Number(s.circles[id]?.unread || 0));
   return (
     <View style={styles.seg}>
       <View style={[styles.segPill, active === "chat" && { marginLeft: "50%" }]} />
@@ -238,9 +324,11 @@ export function Seg({ active, id }: { active: "space" | "chat"; id: string }) {
       </Pressable>
       <Pressable style={styles.segBtn} onPress={() => router.replace(`/circle/${id}/chat` as never)}>
         <Text style={[t(600, 13.5, 14), { color: active === "chat" ? C.burgundy : C.w80 }]}>Chat</Text>
-        <View style={[styles.count, active === "chat" && { backgroundColor: C.burgundy }]}>
-          <Text style={[t(700, 10.5, 11), { color: active === "chat" ? C.white : C.burgundy }]}>3</Text>
-        </View>
+        {unread ? (
+          <View style={[styles.count, active === "chat" && { backgroundColor: C.burgundy }]}>
+            <Text style={[t(700, 10.5, 11), { color: active === "chat" ? C.white : C.burgundy }]}>{unread}</Text>
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -325,6 +413,8 @@ const styles = StyleSheet.create({
   meetRow: { marginTop: 9, flexDirection: "row", alignItems: "center", gap: 8 },
   muted: { ...t(500, 12, 16), color: C.w64 },
   propose: { marginTop: 10, height: 44, borderRadius: 999, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
+  proposeSent: { backgroundColor: "transparent", borderWidth: 1, borderColor: C.w40 },
+  joinBtn: { marginTop: 4, height: 48, borderRadius: 999, backgroundColor: C.gold, alignItems: "center", justifyContent: "center" },
   approvedRow: { marginTop: 22, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.hair, flexDirection: "row", alignItems: "center", gap: 10 },
   approved: { ...t(500, 12.5, 16), color: C.white },
 });

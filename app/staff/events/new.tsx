@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
@@ -49,6 +50,7 @@ export default function NewSimple() {
         <View style={{ marginTop: 14 }}>
           <GoldButton label="Publish to Discover" onPress={() => publishEvent("Breathe before finals", "Thu, Dec 4 · 12:30", "Faculty of Engineering", screen)} />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

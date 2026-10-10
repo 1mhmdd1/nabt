@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -28,7 +29,7 @@ export default function Reviews() {
         ]}
       />
       <Pills items={[`Pending ${pending}`, "Edited fields", "Alumni", "Done"]} value={pill} onChange={setPill} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         {shown.length === 0 ? <Text style={[t(500, 14, 20), { color: C.w64, marginTop: 12 }]}>No accounts in this filter.</Text> : null}
         <View style={styles.list}>
           {shown.map((a, i) => (
@@ -56,6 +57,7 @@ export default function Reviews() {
           <Text style={t(600, 14, 18)}>Communities · assign a Chair</Text>
           <Text style={[t(500, 12, 16), { color: C.w64 }]}>Counts, Chair changes, and semester reports.</Text>
         </Pressable>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

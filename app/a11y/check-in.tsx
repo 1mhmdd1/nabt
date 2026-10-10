@@ -9,6 +9,7 @@ import { recordCheckIn } from "../../src/live";
 import { useVoiceSafety } from "../../src/live/voiceSafety";
 import { useNabt, type Mood } from "../../src/state";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   title: string;
@@ -51,7 +52,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title={copy.title} />
-      <View style={{ paddingHorizontal: 20, paddingTop: 14 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24 }}>
         <Text style={styles.fl}>{copy.when}</Text>
         <Text style={styles.q}>{copy.question}</Text>
         <View style={styles.explain}>
@@ -82,7 +83,7 @@ function Body() {
           <Gold label={copy.save} onPress={save} />
         </View>
         <Outline label={copy.skip} ghost onPress={() => router.replace("/home" as never)} />
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

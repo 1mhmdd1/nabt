@@ -7,9 +7,9 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 
 const BASE = process.env.NABT_WEB || "http://127.0.0.1:8081";
-const PASSWORD = "nabt-demo-local";
 const SHOTS = "/opt/cursor/artifacts/screens-v2";
 const blocked = [];
+let nick = "";
 const results = [];
 
 function pass(name) {
@@ -75,12 +75,24 @@ async function see(page, text, timeout = 20000) {
   }
 }
 
+async function longPress(page, text) {
+  const box = await findText(page, text).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+}
+
 async function login(page, email, urlPart) {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded" });
-  await page.getByLabel("UA email").waitFor({ timeout: 30000 });
-  await page.getByLabel("UA email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel("UA ID").waitFor({ timeout: 30000 });
+  // No password: the @ua.edu.lb part is fixed, a 6-digit code comes back and the demo shows it.
+  await page.getByLabel("UA ID").fill(email.split("@")[0]);
+  await page.getByRole("button", { name: "Send me a sign-in code" }).click();
+  await page.waitForURL(/\/signup\/email/, { timeout: 20000 });
+  const shown = await findText(page, /Demo code: \d{6}/).innerText({ timeout: 20000 });
+  await page.getByLabel("Enter the 6-digit code").fill(shown.match(/\d{6}/)[0]);
+  await page.getByRole("button", { name: "Verify" }).click();
   await page.waitForURL(urlPart, { timeout: 25000 });
 }
 
@@ -93,7 +105,7 @@ async function switchTo(page, email, urlPart) {
 
 async function main() {
   fs.rmSync(SHOTS, { recursive: true, force: true });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME || undefined });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   page.setDefaultTimeout(20000);
   await page.route("**/*", (route) => {
@@ -111,8 +123,12 @@ async function main() {
     await page.evaluate(() => localStorage.clear());
     await page.reload({ waitUntil: "domcontentloaded" });
     await login(page, "202212826@ua.edu.lb", /\/signup\/nickname/);
-    await page.getByLabel("Suggest your own").fill("Gentle Olive");
-    await see(page, "Looks good.");
+    // Nicknames are random only: reroll once, then keep whatever comes up.
+    const label = async () => (await page.getByLabel(/^Nickname /).first().getAttribute("aria-label")).slice("Nickname ".length);
+    const first = await label();
+    await page.getByLabel("Reroll").click();
+    nick = await label();
+    if (nick === first) throw new Error("Reroll kept the same nickname");
     await page.getByRole("button", { name: "Use this name" }).click();
     await page.waitForURL(/\/home/, { timeout: 20000 });
     pass("student nickname");
@@ -128,8 +144,8 @@ async function main() {
     await page.getByRole("tab", { name: "Discover" }).click();
     await page.getByText("Circles", { exact: true }).click();
     await see(page, "Robotics Society");
-    await see(page, "Film Society");
-    await see(page, "Debate Club");
+    await see(page, "Film Club");
+    await see(page, "Debate Society");
     await see(page, "Quiet Hour");
     await page.getByText("Robotics Society", { exact: true }).click();
     await see(page, "Verified");
@@ -151,8 +167,12 @@ async function main() {
     await see(page, "Phone numbers stay off NABT");
     await shot(page, "05-circle-safety-kindness.png");
     await page.getByRole("button", { name: "You've got this" }).click();
-    await scrollTo(page, "Thanks");
-    await page.getByText("Thanks", { exact: true }).click();
+    // Message actions are hidden until a long-press on the message.
+    if (await page.getByText("Report", { exact: true }).count()) throw new Error("Message actions show without a long-press");
+    await scrollTo(page, "That unblocked me. Thank you.");
+    await longPress(page, "That unblocked me. Thank you.");
+    await page.getByRole("menuitem", { name: "Thanks" }).click();
+    await see(page, "Thanked");
     pass("circle chat");
 
     await page.goto(`${BASE}/c/robotics`, { waitUntil: "domcontentloaded" });
@@ -161,15 +181,36 @@ async function main() {
     await see(page, "Robotics Build Night");
     await scrollTo(page, "I’ll go");
     await page.getByText("I’ll go").click();
+    await see(page, "You’re going. See you there.");
+    await page.goto(`${BASE}/e/build-night`, { waitUntil: "domcontentloaded" });
+    await scrollTo(page, "Can’t make it");
     await see(page, "You’re going");
-    await scrollTo(page, "Check in");
-    await page.getByRole("button", { name: "Check in" }).click();
-    await see(page, "Checked in");
-    await scrollTo(page, "Robotics Build Night");
+    // A student can only RSVP and set a reminder here. Check-in, End event and certificates belong to the organizer.
+    for (const word of ["Scan QR", "End event", "Event check-in", "Issue certificates"]) {
+      if (await page.getByText(word, { exact: true }).count()) throw new Error(`Student sees organizer control: ${word}`);
+    }
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, "Scan the organizer’s QR at the event to check in.");
+    pass("student has no self check-in");
+
+    // The Chair shows the QR; the student scans it (the QR opens this link with the code).
+    await switchTo(page, "202148217@ua.edu.lb", /\/home/);
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, /code [A-Z0-9]{6}/);
+    const code = (await findText(page, /code [A-Z0-9]{6}/).innerText()).match(/code ([A-Z0-9]{6})/)[1];
+    await switchTo(page, "202212826@ua.edu.lb", /\/home/);
+    // No second phone here: type the code shown under the QR on the scan screen.
+    await page.goto(`${BASE}/scan`, { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Check-in code").fill(code);
+    await page.getByText("Check in", { exact: true }).click();
+    await see(page, "You’re on the list for this event.");
     await shot(page, "07-event-checkin.png");
-    await scrollTo(page, "End event");
+    await switchTo(page, "202148217@ua.edu.lb", /\/home/);
+    await page.goto(`${BASE}/e/build-night/checkin`, { waitUntil: "domcontentloaded" });
+    await see(page, nick);
     await page.getByRole("button", { name: "End event" }).click();
-    await see(page, "Event ended");
+    await see(page, /Event ended/);
+    await switchTo(page, "202212826@ua.edu.lb", /\/home/);
     pass("build night");
 
     await page.goto(`${BASE}/record`, { waitUntil: "domcontentloaded" });
@@ -181,9 +222,9 @@ async function main() {
     await see(page, "You said, we did");
     await see(page, "Later library hours");
     await page.getByRole("button", { name: "Sign Later library hours" }).click();
-    await see(page, "25 signatures");
+    await see(page, "87 signatures");
     await scrollTo(page, "You said, we did");
-    await see(page, "Quiet rooms during exams");
+    await see(page, "A quiet study room");
     await shot(page, "10-petition-you-said.png");
     pass("petition");
 
@@ -205,8 +246,8 @@ async function main() {
     pass("mentor request");
 
     await switchTo(page, "201903318@ua.edu.lb", /\/staff\/overview/);
-    await see(page, "Check-ins");
-    await see(page, "49");
+    await see(page, "Event check-ins");
+    await see(page, "1151");
     await setScroll(page, 0);
     await shot(page, "02-osa-impact.png");
     await setScroll(page, 9999);
@@ -215,14 +256,14 @@ async function main() {
     pass("osa impact");
 
     await page.getByRole("tab", { name: "Safety" }).click();
-    await see(page, "Gentle Olive · Just want to talk");
-    await scrollTo(page, "Gentle Olive · Just want to talk");
+    await see(page, `${nick} · Just want to talk`);
+    await scrollTo(page, `${nick} · Just want to talk`);
     await shot(page, "03-osa-support-request.png");
     pass("osa safety");
 
     await page.goto(`${BASE}/staff/reviews/petitions`, { waitUntil: "domcontentloaded" });
     await see(page, "Later library hours");
-    await see(page, "25 signatures");
+    await see(page, "87 signatures");
     pass("osa petition count");
 
     await page.goto(`${BASE}/staff/announce`, { waitUntil: "domcontentloaded" });
@@ -239,8 +280,8 @@ async function main() {
 
     await switchTo(page, "201911457@ua.edu.lb", /\/home/);
     await page.goto(`${BASE}/alumni/inbox`, { waitUntil: "domcontentloaded" });
-    await see(page, "Gentle Olive");
-    await page.getByRole("button", { name: "Accept Gentle Olive" }).click();
+    await see(page, nick);
+    await page.getByRole("button", { name: `Accept ${nick}` }).click();
     await page.waitForURL(/\/dm\//, { timeout: 20000 });
     pass("alumni accept");
 

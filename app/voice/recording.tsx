@@ -9,6 +9,7 @@ import { CaptureHandle, startVoiceCapture, VoiceCaptureError } from "../../src/v
 import { voiceCopy } from "../../src/voice/copy";
 import { levelFromDb, TONE_COPY, VOICE_THRESHOLDS } from "../../src/voice/signals";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = { title: string; eyebrow: string; question: string; hint: string; done: string; footer: string };
 
@@ -129,7 +130,7 @@ function Body() {
   return (
     <Screen bg={C.ground}>
       <Top title={copy.title} />
-      <View style={styles.main}>
+      <ScrollBody contentContainerStyle={[styles.main, { paddingBottom: 24 }]}>
         <Text style={styles.ey}>{copy.eyebrow}</Text>
         <Text style={styles.q}>{copy.question}</Text>
         <View style={styles.stage}>
@@ -154,7 +155,7 @@ function Body() {
         </View>
         {!err && !ready ? <Text style={styles.wait}>Available at 0:{String(MIN_S).padStart(2, "0")}</Text> : null}
         <LockLine>{`${TONE_COPY} The recording is deleted right after.`}</LockLine>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

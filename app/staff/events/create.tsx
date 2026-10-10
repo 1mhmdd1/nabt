@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -96,6 +97,7 @@ export default function CreateEvent() {
             <GoldButton label="Publish to Discover" onPress={() => publishEvent("Debate night", when, place, screen)} />
           )}
         </View>
+        <NavSpacer />
       </ScrollView>
       {open ? (
         <Sheet title="Hall B is taken 2:00–4:00">

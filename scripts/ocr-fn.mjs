@@ -17,7 +17,28 @@ let workerPromise = null;
 function worker() {
   if (!workerPromise) {
     mkdirSync(cacheDir, { recursive: true });
-    workerPromise = createWorker("eng", 1, { cachePath: cacheDir, logger: () => undefined }).catch((err) => {
+    let failed = null;
+    const loading = createWorker("eng", 1, {
+      cachePath: cacheDir,
+      logger: () => undefined,
+      // A failed language download must not take the whole server down.
+      errorHandler: (err) => {
+        failed = err;
+        console.warn("card reader:", String(err?.message || err));
+      },
+    });
+    // tesseract.js never settles when the language file can't be downloaded, so give up after a while.
+    const limit = new Promise((_, reject) => {
+      const started = Date.now();
+      const tick = setInterval(() => {
+        if (failed || Date.now() - started > 60000) {
+          clearInterval(tick);
+          reject(new Error("The card reader could not load its English language file. Connect the laptop to the internet once."));
+        }
+      }, 250);
+      loading.finally(() => clearInterval(tick)).catch(() => undefined);
+    });
+    workerPromise = Promise.race([loading, limit]).catch((err) => {
       workerPromise = null;
       throw err;
     });
@@ -30,10 +51,9 @@ export function warmReader() {
   worker().catch((err) => console.warn("card reader not ready:", String(err.message || err)));
 }
 
+// Lines on the card that are never part of the name.
 const STOP =
-  /universit|antonine|student|étudiant|etudiant|carte|card|identit|faculty|facult|lebanon|liban|baabda|hadat|valid|expir|email|www|http|ua\.edu|date|birth|naissance|signature|matricule|number|numéro|numero|\bid\b|\bno\b|academic|year|semester|campus/i;
-const FIELDS =
-  /engineering|business|science|arts|medicine|health|law|music|education|sport|nursing|tourism|design|economics|pharmacy|dentistry|architecture|humanities|theology|information|computer|management|letters|communication|technology|ingénierie|gestion|sciences/i;
+  /universit|antonine|alumni|student|[ée]tudiant|class of|valid|thru|expir|carte|card|identit|facult|lebanon|liban|baabda|hadat|email|www|http|ua\.edu|date|birth|naissance|signature|matricule|number|num[ée]ro|\bid\b|academic|semester|campus/i;
 
 const small = new Set(["of", "and", "the", "de", "des", "du", "et", "la", "le", "les"]);
 function titleCase(s) {
@@ -51,45 +71,63 @@ function titleCase(s) {
     )
     .join(" ");
 }
-const isCaps = (s) => (s === s.toUpperCase() && /[A-Z]/.test(s) ? 1 : 0);
 
-/** Pulls name, 9-digit student ID and faculty out of raw OCR text. */
-export function parseCardText(text) {
+/** A 9-digit UA ID: the year joined (2019 through this year), then 5 digits. */
+function findStudentId(lines, thisYear) {
+  const ok = (id) => {
+    const year = Number(id.slice(0, 4));
+    return id.length === 9 && year >= 2019 && year <= thisYear;
+  };
+  for (const line of lines) {
+    // OCR often reads O as 0, I or l as 1, S as 5, B as 8 inside a number.
+    const fixed = line.replace(/(?<=[0-9])[Oo]|[Oo](?=[0-9])/g, "0").replace(/(?<=[0-9])[Il|]|[Il|](?=[0-9])/g, "1").replace(/(?<=[0-9])S|S(?=[0-9])/g, "5").replace(/(?<=[0-9])B|B(?=[0-9])/g, "8");
+    for (const run of fixed.replace(/(?<=\d)[ .-](?=\d)/g, "").match(/\d{9,}/g) || []) {
+      if (run.length === 9 && ok(run)) return run;
+    }
+  }
+  return "";
+}
+
+/** A line of the name: capitals only, one to three words, no digits. */
+function isNameLine(line) {
+  if (/\d/.test(line) || STOP.test(line)) return false;
+  const clean = line.replace(/[^A-Za-zÀ-ÿ'’ -]/g, "").replace(/\s+/g, " ").trim();
+  if (clean.length < 2 || clean.length > 30) return false;
+  if (clean !== clean.toUpperCase()) return false;
+  const words = clean.split(" ");
+  return words.length >= 1 && words.length <= 3 && words.every((w) => /^[A-ZÀ-Þ][A-ZÀ-Þ'’-]*$/.test(w)) && clean.replace(/[^A-ZÀ-Þ]/g, "").length >= 2;
+}
+
+/**
+ * Pulls name, 9-digit student ID and faculty out of the OCR text of a Université Antonine card.
+ * The name is printed as two lines of capitals, first name then family name. The role line is
+ * Student (with "Valid thru") or Alumni (with "Class of"). The cards print no faculty, so faculty
+ * stays empty unless a faculty line is actually there.
+ */
+export function parseCardText(text, thisYear = new Date().getFullYear()) {
   const lines = String(text || "")
     .split(/\r?\n/)
     .map((l) => l.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  let studentId = "";
-  for (const line of lines) {
-    for (const tok of line.split(/[^A-Za-z0-9]+/)) {
-      if (tok.length < 9 || tok.length > 11) continue;
-      const fixed = tok.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1").replace(/S/g, "5").replace(/B/g, "8").replace(/[^0-9]/g, "");
-      const m = fixed.match(/(19|20)\d{7}/);
-      if (m) {
-        studentId = m[0];
-        break;
-      }
-    }
-    if (studentId) break;
-  }
+  const studentId = findStudentId(lines, thisYear);
 
-  const facLine = lines.find((l) => /facult/i.test(l)) || lines.find((l) => FIELDS.test(l) && !/\d/.test(l));
+  const facLine = lines.find((l) => /facult/i.test(l));
   let faculty = "";
   if (facLine) {
-    const clean = facLine.replace(/[^A-Za-zÀ-ÿ&' -]/g, " ").replace(/\s+/g, " ").trim();
-    const m = clean.match(/facult(?:y|é|e)?\s*(?:of|de|des)?\s*(.+)$/i);
-    faculty = m && m[1] ? `Faculty of ${titleCase(m[1])}` : titleCase(clean);
+    const m = facLine.replace(/[^A-Za-zÀ-ÿ&' -]/g, " ").replace(/\s+/g, " ").trim().match(/facult(?:y|é|e)\s*(?:of|de|des|d')?\s*(.+)$/i);
+    if (m && m[1]) faculty = `Faculty of ${titleCase(m[1])}`;
   }
 
-  const candidates = lines.filter((l) => {
-    if (/\d/.test(l) || STOP.test(l)) return false;
-    const words = l.split(" ");
-    if (words.length < 2 || words.length > 4 || l.length < 5 || l.length > 40) return false;
-    return words.every((w) => /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’.-]*$/.test(w) && w.length >= 1);
-  });
-  candidates.sort((a, b) => isCaps(b) - isCaps(a) || b.length - a.length);
-  const fullName = candidates[0] ? titleCase(candidates[0]) : "";
+  // First name and family name sit on two lines in a row. Join them; one line alone also counts.
+  let fullName = "";
+  for (let i = 0; i < lines.length; i++) {
+    if (!isNameLine(lines[i])) continue;
+    const first = lines[i].replace(/[^A-Za-zÀ-ÿ'’ -]/g, "").trim();
+    const next = i + 1 < lines.length && isNameLine(lines[i + 1]) ? lines[i + 1].replace(/[^A-Za-zÀ-ÿ'’ -]/g, "").trim() : "";
+    fullName = titleCase(next ? `${first} ${next}` : first);
+    if (next || first.includes(" ")) break;
+  }
 
   return { fullName, studentId, faculty };
 }

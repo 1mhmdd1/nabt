@@ -22,8 +22,8 @@ export default function Settings() {
   const status = useCampus((s) => s.status);
   const email = useCampus((s) => s.email);
   const joined = idYear(id);
-  const robotChair = useCampus((s) => s.circles.robotics?.chairUid);
-  const isChair = Boolean(robotChair && robotChair === me());
+  // The Circle this account chairs, if any. Student Affairs assigns the Chair.
+  const chaired = useCampus((s) => Object.values(s.circles).find((c) => c.chairUid && c.chairUid === me()));
 
   return (
     <Screen bg={C.ground}>
@@ -97,7 +97,7 @@ export default function Settings() {
           />
           {role === "staff" ? <Line title="Student Affairs" sub="Mood, safety, petitions" onPress={() => router.push("/staff/overview" as never)} /> : null}
           {alumni ? <Line title="Mentor inbox" sub="Requests from students" onPress={() => router.push("/alumni/inbox" as never)} /> : null}
-          {isChair ? <Line title="Chair dashboard" sub="Robotics Society" onPress={() => router.push("/c/robotics/chair" as never)} /> : null}
+          {chaired ? <Line title="Chair dashboard" sub={chaired.name} onPress={() => router.push(`/c/${chaired.id}/chair` as never)} /> : null}
           <Line title="Switch account" sub="Sign out and pick another demo account" onPress={() => { void signOutEverywhere().finally(() => router.replace("/login" as never)); }} />
           <Line
             title="Reset demo data"

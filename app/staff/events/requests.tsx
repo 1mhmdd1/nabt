@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Avatar, Chip, Seg, SmallButton, StaffFrame } from "../../../src/components/staff/StaffChrome";
 import { C, t } from "../../../src/theme";
@@ -16,7 +17,7 @@ export default function Requests() {
           { label: "Requests", count: open, on: true, href: "/staff/events/requests" },
         ]}
       />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 }}>
         {rows.map((r, i) => (
           <View key={r.id} style={[styles.case, i === 0 && r.status === "sent" && styles.sel]}>
             <View style={styles.r1}>
@@ -37,6 +38,7 @@ export default function Requests() {
           </View>
         ))}
         <Text style={[t(500, 12, 16), { color: C.w64, marginTop: 10 }]}>Approved requests book the room and show in Discover.</Text>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

@@ -1,6 +1,8 @@
+import { NAV_HEIGHT, useKeyboardOpen, useNavBottom } from "./navSpace";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { C, shadow, t } from "../theme";
+import { demoLocal } from "../local/mode";
 import {
   IconCalendar,
   IconChat,
@@ -21,9 +23,10 @@ const SLOTS: Record<TabId, number> = { home: 0, discover: 1, chats: 3, me: 4 };
 const ITEMS = [
   { title: "Post a thread", sub: "Ask your Circle, kindly", icon: <IconCompose />, href: "/circle/exam-week" },
   { title: "Propose a meetup", sub: "A counselor approves the spot", icon: <IconCalendar />, href: "/circle/exam-week" },
-  { title: "Leave a node note", sub: "Shows on a Hope Node screen", icon: <IconHeart />, href: "/n/engineering" },
+  { title: "Leave a node note", sub: "Shows on a Hope Node screen", icon: <IconHeart />, href: "/n/engineering", node: true },
   { title: "Start a petition", sub: "Ask Student Affairs for a change", icon: <IconDoc />, href: "/discover" },
-];
+  { title: "Event check-in", sub: "Scan the organizer’s QR at the event", icon: <IconCalendar />, href: "/scan" },
+].filter((item) => !(item.node && demoLocal())); // Hope Node is the next step, not part of the demo.
 
 export function FloatingNav({
   active,
@@ -39,6 +42,8 @@ export function FloatingNav({
   showDot?: boolean;
 }) {
   const slot = SLOTS[active];
+  const bottom = useNavBottom();
+  if (useKeyboardOpen()) return null;
   const go = (href: string) => {
     onToggle();
     router.push(href as never);
@@ -48,7 +53,7 @@ export function FloatingNav({
       {open ? (
         <Pressable style={styles.scrim} onPress={onToggle} accessibilityLabel="Close create menu" />
       ) : null}
-      <View style={[styles.wrap, { pointerEvents: "box-none" }]}>
+      <View style={[styles.wrap, { bottom, pointerEvents: "box-none" }]}>
         {open ? (
           <View style={styles.menu} accessibilityRole="menu" accessibilityLabel="Create">
             {ITEMS.map((item) => (
@@ -125,7 +130,7 @@ function Tab({
 
 const styles = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: C.scrim, zIndex: 29 },
-  wrap: { position: "absolute", left: 12, right: 12, bottom: 24, height: 64, zIndex: 30 },
+  wrap: { position: "absolute", left: 12, right: 12, height: NAV_HEIGHT, zIndex: 30 },
   bar: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 999,

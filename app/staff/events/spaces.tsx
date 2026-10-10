@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -28,7 +29,7 @@ export default function Spaces() {
         ]}
       />
       <Pills items={PILLS} value={pill} onChange={setPill} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 140, gap: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, gap: 8 }}>
         {shown.map((s) => (
           <Pressable key={s.id} onPress={() => router.push(`/staff/events/room/${s.id}` as never)} style={[styles.sp, s.selected && styles.sel]}>
             <View style={styles.r1}>
@@ -50,6 +51,7 @@ export default function Spaces() {
             </View>
           </Pressable>
         ))}
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

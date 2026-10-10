@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { FloatingNav } from "../../../src/components/Nav";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -7,8 +8,29 @@ import { Card, Eyebrow, Muted, SubHead } from "../../../src/community/ui";
 import { C, t } from "../../../src/theme";
 import { me, useCampus } from "../../../src/live";
 import { requestVenue, useCommunity } from "../../../src/live/communities";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
-export default function VenueRequest() {
+/** The next three weekdays from tomorrow, labelled like "Thu 16 Oct". */
+function nextWeekdays(count: number) {
+  const out: string[] = [];
+  const d = new Date();
+  while (out.length < count) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    out.push(`${d.toLocaleDateString("en-GB", { weekday: "short" })} ${d.getDate()} ${d.toLocaleDateString("en-GB", { month: "short" })}`);
+  }
+  return out;
+}
+
+export default function VenueRequestScreen() {
+  return (
+    <ChairOnly>
+      <VenueRequest />
+    </ChairOnly>
+  );
+}
+
+function VenueRequest() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const circle = useCampus((s) => s.circles[id]);
@@ -23,7 +45,7 @@ export default function VenueRequest() {
   const [form, setForm] = useState(false);
   const [nav, setNav] = useState(false);
   const isChair = circle?.chairUid === me();
-  const options = ["Thu 16 Oct", "Fri 17 Oct", "Tue 21 Oct"];
+  const [options] = useState(() => nextWeekdays(3));
 
   function toggle(day: string) {
     setDates((cur) => {
@@ -59,7 +81,7 @@ export default function VenueRequest() {
   return (
     <Screen>
       <SubHead title={circle?.name || "Circle"} chip="Space · Chat" chipGold={false} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 10 }}>
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text style={styles.chair}>CHAIR</Text>
@@ -75,7 +97,7 @@ export default function VenueRequest() {
         </Card>
         <Card>
           <Eyebrow>Plan with your board</Eyebrow>
-          <Text style={[t(700, 16, 22), { marginTop: 6 }]}>{circle?.nextEventTitle || "Build Night"} · {requests[0]?.dateOptions[0] || "Thu 16 Oct"}</Text>
+          <Text style={[t(700, 16, 22), { marginTop: 6 }]}>{[circle?.nextEventTitle || "Your next event", requests[0]?.dateOptions[0]].filter(Boolean).join(" · ")}</Text>
           <Muted>Budget, kit and logistics live in the private board channel.</Muted>
           <Pressable onPress={() => router.push(`/c/${id}/audit` as never)} style={styles.link}>
             <Text style={t(600, 13, 16)}>Open board channel</Text>
@@ -108,6 +130,7 @@ export default function VenueRequest() {
             </Pressable>
           </>
         ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" open={nav} onToggle={() => setNav((v) => !v)} />
     </Screen>
@@ -116,7 +139,7 @@ export default function VenueRequest() {
 
 const styles = {
   k: { ...t(700, 10, 12), letterSpacing: 1.1, textTransform: "uppercase" as const, color: C.w64 },
-  chair: { ...t(700, 10, 12), letterSpacing: 0.6, color: C.burgundy, backgroundColor: C.gold, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" as const },
+  chair: { ...t(700, 10, 12), letterSpacing: 0.6, color: C.white, borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: "hidden" as const },
   link: { marginTop: 10, alignSelf: "flex-start" as const, height: 34, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.45)", alignItems: "center" as const, justifyContent: "center" as const },
   choice: { padding: 14, borderRadius: 16, backgroundColor: C.raised },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: C.w40 },

@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Svg, { Rect } from "react-native-svg";
@@ -14,6 +15,7 @@ import { askVerification, decideJoin, eventIsLive, useCommunity } from "../../..
 import { useEventRoster } from "../../../src/live/eventCheckin";
 import { issueCircleCertificates } from "../../../src/live/records";
 import { demoLocal } from "../../../src/local/mode";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
 const SHORT: Record<string, string> = {
   events: "Events",
@@ -26,6 +28,14 @@ const SHORT: Record<string, string> = {
 };
 
 export default function ChairDashboard() {
+  return (
+    <ChairOnly>
+      <ChairDashboardScreen />
+    </ChairOnly>
+  );
+}
+
+function ChairDashboardScreen() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const [open, setOpen] = useState(false);
@@ -60,8 +70,9 @@ export default function ChairDashboard() {
     .filter((m): m is NonNullable<typeof m> => Boolean(m));
   const roster = useEventRoster(liveEvent?.id || "");
   const here = roster?.length ?? 0;
-  const bars = [...(circle?.attendance || [10, 14, 8, 18, 22])];
-  if (liveEvent && here > 0) bars[bars.length - 1] = here;
+  // Past events, then tonight's live count once people check in.
+  const bars = [...(circle?.attendance || []), ...(liveEvent && here > 0 ? [here] : [])].slice(-5);
+  const barMax = Math.max(1, ...bars);
   const needs = circle?.needs || [];
 
   return (
@@ -155,24 +166,11 @@ export default function ChairDashboard() {
             <Eyebrow>Attendance · last 5</Eyebrow>
             <Svg width="100%" height={40} viewBox="0 0 100 36" style={{ marginTop: 6 }}>
               {bars.map((value, i) => {
-                const x = i * 22;
-                const solid = Math.max(4, Math.round((value / 30) * 16));
-                const light = Math.max(2, Math.round((value / 30) * 6));
-                const y = 36 - light - solid;
-                return (
-                  <Rect key={i} x={x} y={y} width={14} height={solid} rx={2} fill="#fff" />
-                );
-              })}
-              {bars.map((value, i) => {
-                const x = i * 22;
-                const light = Math.max(2, Math.round((value / 30) * 6));
-                const y = 36 - light;
-                return (
-                  <Rect key={`n${i}`} x={x} y={y} width={14} height={light} rx={2} fill="#fff" fillOpacity={0.4} />
-                );
+                const h = Math.max(3, Math.round((value / barMax) * 34));
+                return <Rect key={i} x={i * 22} y={36 - h} width={14} height={h} rx={2} fill="#fff" fillOpacity={i === bars.length - 1 ? 1 : 0.55} />;
               })}
             </Svg>
-            <Muted>Solid returning · light new</Muted>
+            <Muted>{bars.length ? `People at each event · last ${bars[bars.length - 1]}` : "No events yet"}</Muted>
             {liveEvent ? (
               <Pressable onPress={() => router.push(`/e/${liveEvent.id}/checkin` as never)}>
                 <Muted>
@@ -252,6 +250,7 @@ export default function ChairDashboard() {
             <Text style={t(600, 13, 16)}>Mentor pool</Text>
           </Pressable>
         </View>
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="me" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
@@ -285,7 +284,7 @@ function venueLine(status?: string) {
 
 const styles = {
   me: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.deep, borderWidth: 2, borderColor: C.gold, alignItems: "center" as const, justifyContent: "center" as const },
-  chair: { ...t(700, 10, 12), letterSpacing: 0.8, color: C.burgundy, backgroundColor: C.gold, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden" as const },
+  chair: { ...t(700, 10, 12), letterSpacing: 0.8, color: C.white, borderWidth: 1, borderColor: "rgba(255,255,255,0.55)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, overflow: "hidden" as const },
   bento: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
   tile: { width: "48%" as const, backgroundColor: "#5A2222", borderRadius: 18, padding: 12, gap: 2 },
   main: { height: 48, borderRadius: 999, backgroundColor: C.white, alignItems: "center" as const, justifyContent: "center" as const },

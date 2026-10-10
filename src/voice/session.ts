@@ -34,7 +34,7 @@ export async function analyseCheckIn(sample: VoiceSample): Promise<VoiceBand> {
     metrics: result.metrics,
     audioDeleted: result.audioDeleted,
   });
-  void recordCheckIn().catch(() => undefined);
+  void recordCheckIn("voice").catch(() => undefined);
   if (result.band === "very_low") {
     const assessment = await noteLowVoice();
     await noteCareStep("extra_card");

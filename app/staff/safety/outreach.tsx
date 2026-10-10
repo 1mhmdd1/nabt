@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -18,7 +19,7 @@ export default function Outreach() {
   const name = item?.nickname || "A student";
   return (
     <StaffFrame title={name} chip="Identity hidden" back={`/staff/safety/${id}`}>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 90 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.note}>
           <Svg width={13} height={13} viewBox="0 0 20 20" fill="none">
             <Path d="M10 2.2 3.6 4.6v5c0 3.9 2.7 6.9 6.4 8.2 3.7-1.3 6.4-4.3 6.4-8.2v-5L10 2.2Z" stroke="#fff" strokeWidth={1.7} />
@@ -38,7 +39,15 @@ export default function Outreach() {
         <Text style={[styles.fl, { marginTop: 14 }]}>Templates</Text>
         <View style={styles.cos}>
           {TEMPLATES.map((label) => (
-            <Pressable key={label} style={styles.co} onPress={() => setText(label === "Suggest 1564" ? "Embrace 1564 is there day and night if you want a person on the phone." : `Just checking in, ${name}. No need to reply unless you want to.`)}>
+            <Pressable key={label} style={styles.co} onPress={() =>
+                setText(
+                  label === "Suggest 1564"
+                    ? "Embrace 1564 is there day and night if you want a person on the phone."
+                    : label === "Offer a room"
+                      ? `If a quiet room on campus would help, ${name}, I can book one for you. Just tell me when.`
+                      : `Just checking in, ${name}. No need to reply unless you want to.`,
+                )
+              }>
               <Text style={t(600, 12.5, 16)}>{label}</Text>
             </Pressable>
           ))}
@@ -46,6 +55,7 @@ export default function Outreach() {
         <View style={{ marginTop: 12 }}>
           <OutlineButton label="Suggest Embrace 1564" onPress={() => sendOutreach(id, "If it feels like too much, Embrace 1564 is Lebanon’s 24/7 lifeline. You can stay anonymous with me here.")} />
         </View>
+        <NavSpacer />
       </ScrollView>
       <View style={styles.cmp}>
         <TextInput

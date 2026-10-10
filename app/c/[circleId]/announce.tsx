@@ -6,8 +6,17 @@ import { Muted, SubHead } from "../../../src/community/ui";
 import { C, t } from "../../../src/theme";
 import { useCampus } from "../../../src/live";
 import { publishAnnouncement } from "../../../src/live/impact";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
 export default function CircleAnnounce() {
+  return (
+    <ChairOnly>
+      <CircleAnnounceScreen />
+    </ChairOnly>
+  );
+}
+
+function CircleAnnounceScreen() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const circle = useCampus((s) => s.circles[id]);

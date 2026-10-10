@@ -5,6 +5,7 @@ import { Screen } from "../../src/components/Chrome";
 import { BackBar } from "../../src/components/NodeChrome";
 import { C, t } from "../../src/theme";
 import { createCircle } from "../../src/live/communities";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 export default function NewCircle() {
   const [name, setName] = useState("");
@@ -29,7 +30,7 @@ export default function NewCircle() {
   return (
     <Screen>
       <BackBar title="Start a Circle" />
-      <View style={{ paddingHorizontal: 20, gap: 10 }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
         <TextInput value={name} onChangeText={setName} placeholder="Circle name" placeholderTextColor={C.w64} accessibilityLabel="Circle name" style={field} />
         <Pressable accessibilityRole="button" accessibilityLabel="Community" onPress={() => setKind("community")} style={[choice, kind === "community" && on]}>
           <Text style={{ color: kind === "community" ? C.burgundy : C.white }}>Community</Text>
@@ -46,7 +47,7 @@ export default function NewCircle() {
         <Pressable accessibilityRole="button" accessibilityLabel="Create Circle" disabled={busy || name.trim().length < 2} onPress={() => void create()} style={btn}>
           <Text style={[t(700, 15, 18), { color: C.burgundy }]}>{busy ? "Creating…" : "Create"}</Text>
         </Pressable>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

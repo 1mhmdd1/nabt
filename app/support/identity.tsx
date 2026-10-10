@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { router } from "expo-router";
 import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, InfoIcon, LockLine, Outline, Sheet, Top, useScreen } from "../../src/components/voice/Kit";
@@ -6,6 +6,7 @@ import { shareIdentityConsent, useVoiceSafety } from "../../src/live/voiceSafety
 import { useCampus } from "../../src/live";
 import { C, t } from "../../src/theme";
 import { useNabt } from "../../src/state";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = {
   sub: string;
@@ -35,6 +36,7 @@ function Body() {
   const id = useCampus((s) => s.studentId);
   const plain = useNabt((s) => s.plainLanguage);
   const sent = useVoiceSafety((s) => s.sent);
+  const { height } = useWindowDimensions();
   if (!copy) return null;
   return (
     <Screen bg={C.ground}>
@@ -50,30 +52,32 @@ function Body() {
       </View>
       <View style={styles.scrim} />
       <Sheet title={copy.title}>
-        <Text style={styles.body}>{copy.body}</Text>
-        {plain ? (
-          <View style={styles.explain}>
-            <InfoIcon />
-            <Text style={styles.explainText}>{copy.explain}</Text>
+        <ScrollBody style={{ flex: 0, maxHeight: height * 0.7 }}>
+          <Text style={styles.body}>{copy.body}</Text>
+          {plain ? (
+            <View style={styles.explain}>
+              <InfoIcon />
+              <Text style={styles.explainText}>{copy.explain}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.fl}>{copy.label}</Text>
+          <View style={styles.list}>
+            <View style={styles.it}>
+              <Text style={t(600, 14, 18)}>{copy.nameLabel}</Text>
+              <Text style={styles.small}>{name}</Text>
+            </View>
+            <View style={styles.it}>
+              <Text style={t(600, 14, 18)}>{copy.idLabel}</Text>
+              <Text style={styles.small}>{id}</Text>
+            </View>
           </View>
-        ) : null}
-        <Text style={styles.fl}>{copy.label}</Text>
-        <View style={styles.list}>
-          <View style={styles.it}>
-            <Text style={t(600, 14, 18)}>{copy.nameLabel}</Text>
-            <Text style={styles.small}>{name}</Text>
+          <LockLine>{copy.foot}</LockLine>
+          {sent ? <Text style={styles.sent}>{sent}</Text> : null}
+          <View style={{ marginTop: 14 }}>
+            <Gold label={copy.primary} onPress={() => void shareIdentityConsent().catch(() => undefined)} />
           </View>
-          <View style={styles.it}>
-            <Text style={t(600, 14, 18)}>{copy.idLabel}</Text>
-            <Text style={styles.small}>{id}</Text>
-          </View>
-        </View>
-        <LockLine>{copy.foot}</LockLine>
-        {sent ? <Text style={styles.sent}>{sent}</Text> : null}
-        <View style={{ marginTop: 14 }}>
-          <Gold label={copy.primary} onPress={() => void shareIdentityConsent().catch(() => undefined)} />
-        </View>
-        <Outline label={copy.skip} ghost onPress={() => router.push("/support/declined" as never)} />
+          <Outline label={copy.skip} ghost onPress={() => router.push("/support/declined" as never)} />
+        </ScrollBody>
       </Sheet>
     </Screen>
   );

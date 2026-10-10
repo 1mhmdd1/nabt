@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Chip, GoldButton, OutlineButton, StaffFrame } from "../../../../src/components/staff/StaffChrome";
@@ -45,6 +46,7 @@ export default function VerifyDetail() {
           <Chip label="“Almost there, add an advisor?”" />
           <Chip label="“Let’s meet first”" />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

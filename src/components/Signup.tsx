@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SvgXml } from "react-native-svg";
 import { markSvg } from "../art/svgs";
@@ -41,7 +41,16 @@ export function SignupScreen({
           ))}
         </View>
       ) : null}
-      <View style={styles.main}>{children}</View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.main}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
       <HomeIndicator />
     </View>
   );
@@ -65,5 +74,5 @@ const styles = StyleSheet.create({
   progress: { flexDirection: "row", gap: 5, paddingHorizontal: 20, paddingTop: 2 },
   bar: { flex: 1, height: 2, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" },
   barOn: { backgroundColor: C.white },
-  main: { flex: 1, paddingTop: 26, paddingHorizontal: 20 },
+  main: { flexGrow: 1, paddingTop: 26, paddingHorizontal: 20 },
 });

@@ -1,3 +1,4 @@
+import { NavSpacer } from "../src/components/navSpace";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -9,7 +10,7 @@ import { Avatar, Card, Muted } from "../src/community/ui";
 import { C, t } from "../src/theme";
 import { postPromptAnswer, useCampus } from "../src/live";
 import { rsvpEvent, signPetition, useCommunity } from "../src/live/communities";
-import { useImpact } from "../src/live/impact";
+import { useMyYouSaid } from "../src/live/impact";
 
 const PILLS = ["For you", "Circles", "Events", "Places"] as const;
 
@@ -24,11 +25,11 @@ export default function Discover() {
   const [answered, setAnswered] = useState("");
   const campus = useCampus();
   const community = useCommunity();
-  const youSaid = useImpact((s) => s.youSaid);
+  const youSaid = useMyYouSaid();
   const query = q.trim().toLowerCase();
   const show = (text: string) => !query || text.toLowerCase().includes(query);
   const circles = Object.values(campus.circles);
-  const communities = circles.filter((c) => (c.kind === "community" && c.verified) || c.id === "quiet-hour");
+  const communities = circles.filter((c) => (c.kind === "community" && c.verified) || c.kind === "support");
   const exam = campus.circles["exam-week"];
   const places = campus.campus.filter((c) => c.icon === "pin");
   const featured = community.events.filter((e) => e.hostType === "sa");
@@ -64,7 +65,7 @@ export default function Discover() {
           ))}
         </View>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 10 }}>
         {pill === "For you" ? (
           <Card onPress={() => router.push("/alumni" as never)}>
             <Text style={t(600, 16, 21)}>Alumni mentors</Text>
@@ -166,11 +167,11 @@ export default function Discover() {
                   {(event.faces || []).map((letter) => (
                     <View key={letter} style={styles.face}><Text style={[t(600, 11, 12), { color: C.gold }]}>{letter}</Text></View>
                   ))}
-                  <Text style={[t(500, 12.5, 16), { color: C.w64, marginLeft: 14 }]}>{event.rsvpCount} going</Text>
+                  <Text style={[t(500, 12.5, 16), { color: C.w64, marginLeft: 14 }]}>{(event.rsvpCount || 0) + (community.rsvpCounts[event.id] || 0)} going</Text>
                 </View>
-                <Pressable onPress={() => void rsvpEvent(event.id, !community.myRsvps[event.id])} style={styles.going}>
-                  <IconCheck size={14} color={C.burgundy} />
-                  <Text style={[t(700, 13.5, 16), { color: C.burgundy }]}>Going</Text>
+                <Pressable accessibilityRole="button" onPress={() => void rsvpEvent(event.id, !community.myRsvps[event.id])} style={styles.going}>
+                  {community.myRsvps[event.id] ? <IconCheck size={14} color={C.burgundy} /> : null}
+                  <Text style={[t(700, 13.5, 16), { color: C.burgundy }]}>{community.myRsvps[event.id] ? "Going" : "I’ll go"}</Text>
                 </Pressable>
               </View>
             </Card>
@@ -178,7 +179,12 @@ export default function Discover() {
 
         {pill === "For you" && exam?.prompt ? (
           <Card>
-            <Text style={styles.k}>Exam Week · today’s prompt</Text>
+            <View style={styles.between}>
+              <Text style={styles.k}>{exam.name} · today’s prompt</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Open ${exam.name}`} onPress={() => router.push(`/circle/${exam.id}` as never)}>
+                <Text style={[t(600, 12.5, 16), { color: C.w80 }]}>Open</Text>
+              </Pressable>
+            </View>
             <Text style={[t(600, 17, 23), { marginTop: 8 }]}>{exam.prompt}</Text>
             <View style={[styles.stack, { marginTop: 12 }]}>
               {(exam.promptFaces || []).map((letter) => (
@@ -220,7 +226,7 @@ export default function Discover() {
                 {c.verified ? <Text style={styles.verified}>Verified</Text> : null}
               </View>
               <Text style={[styles.body, { marginTop: 6 }]}>{c.charter}</Text>
-              <Muted>{c.officialLine || "Official UA club"} · {c.memberCount ?? 0} members</Muted>
+              <Muted>{c.officialLine || (c.kind === "support" ? "Support circle" : "Official UA club")} · {c.memberCount ?? 0} members</Muted>
             </Card>
           ))}
 
@@ -282,6 +288,7 @@ export default function Discover() {
             <Muted>Hope Threads, events and places appear here as people share them.</Muted>
           </Card>
         ) : null}
+        <NavSpacer />
       </ScrollView>
       <FloatingNav active="discover" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>

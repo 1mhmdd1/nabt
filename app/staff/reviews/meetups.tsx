@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Chip, Seg, SmallButton, StaffFrame } from "../../../src/components/staff/StaffChrome";
 import { C, t } from "../../../src/theme";
@@ -18,7 +19,7 @@ export default function Meetups() {
           { label: "Meetups", count: proposed.length, on: true, href: "/staff/reviews/meetups" },
         ]}
       />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <Text style={styles.fl}>Proposed · {proposed.length}</Text>
         {proposed.map((m) => (
           <View key={m.id} style={styles.case}>
@@ -35,11 +36,12 @@ export default function Meetups() {
               </>
             ) : null}
             <View style={styles.row}>
-              <SmallButton label="Approve · pin on map" on onPress={() => approveMeetup(m.id, m.spot || "Main gate garden")} />
-              <SmallButton label="Decline" onPress={() => declineMeetup(m.id)} />
+              <SmallButton label="Approve" on onPress={() => void approveMeetup(m.id, m.spot || "")} />
+              <SmallButton label="Decline" onPress={() => void declineMeetup(m.id)} />
             </View>
           </View>
         ))}
+        {proposed.length === 0 ? <Text style={styles.sub}>No meetups waiting.</Text> : null}
         <Text style={[styles.fl, { marginTop: 8 }]}>Approved spots</Text>
         <View style={styles.list}>
           {spots.map((s, i) => (
@@ -52,7 +54,9 @@ export default function Meetups() {
               <Text style={[t(500, 12.5, 16), { color: C.w70 }]}>Counselor ✓</Text>
             </View>
           ))}
+          {spots.length === 0 ? <Text style={[styles.sub, { padding: 14 }]}>No approved spots yet.</Text> : null}
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

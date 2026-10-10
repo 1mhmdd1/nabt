@@ -5,8 +5,17 @@ import { Card, Muted, SubHead } from "../../../src/community/ui";
 import { t } from "../../../src/theme";
 import { useCampus } from "../../../src/live";
 import { useCommunity } from "../../../src/live/communities";
+import { ChairOnly } from "../../../src/community/ChairOnly";
 
 export default function CircleAudit() {
+  return (
+    <ChairOnly>
+      <CircleAuditScreen />
+    </ChairOnly>
+  );
+}
+
+function CircleAuditScreen() {
   const { circleId } = useLocalSearchParams<{ circleId: string }>();
   const id = circleId || "";
   const circle = useCampus((s) => s.circles[id]);

@@ -7,6 +7,7 @@ import { IconLock, IconPlus } from "../src/components/Icons";
 import { C, t } from "../src/theme";
 import { useNabt } from "../src/state";
 import { answerChatRequest, useCampus } from "../src/live";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 export default function Chats() {
   const [open, setOpen] = useState(false);
@@ -57,7 +58,7 @@ export default function Chats() {
           ))}
         </View>
       </View>
-      <View style={styles.list}>
+      <ScrollBody nav contentContainerStyle={styles.list}>
         {rows.length === 0 ? (
           <View style={styles.empty}>
             <Text style={t(600, 16, 21)}>{pending ? "Circles open after approval." : filter === "1:1" ? "No 1:1 chats yet." : "No Circles yet. Start one."}</Text>
@@ -119,7 +120,7 @@ export default function Chats() {
           <IconLock size={12} color={C.w64} />
           <Text style={[t(500, 12, 16), { color: C.w64 }]}>Nicknames by default. You choose when to share your name.</Text>
         </View>
-      </View>
+      </ScrollBody>
       <FloatingNav active="chats" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
   );
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   pills: { flexDirection: "row", gap: 8, marginTop: 2, marginBottom: 8 },
   pill: { height: 32, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: C.w40, alignItems: "center", justifyContent: "center" },
   pillOn: { backgroundColor: C.white, borderColor: C.white },
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
+  list: { paddingHorizontal: 20, paddingBottom: 16 },
   row: { flexDirection: "row", gap: 12, alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.hair },
   req: { paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.hair },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },

@@ -5,6 +5,7 @@ import { GoldButton, Screen } from "../src/components/Chrome";
 import { IconBack } from "../src/components/Icons";
 import { C, t } from "../src/theme";
 import { postFn } from "../src/fn";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 const TOTAL = 3 * 60;
 
@@ -49,7 +50,7 @@ export default function Task() {
         </Pressable>
         <Text style={styles.h}>Today’s step</Text>
       </View>
-      <View style={styles.body}>
+      <ScrollBody contentContainerStyle={[styles.body, { paddingBottom: 24 }]}>
         <Text style={styles.time}>{clock(left)}</Text>
         <Text style={styles.sub}>{left === 0 ? "Time’s up. Mark it done." : running ? "Three quiet minutes." : "Paused."}</Text>
         {note ? <Text style={styles.note}>{note}</Text> : null}
@@ -69,7 +70,7 @@ export default function Task() {
           </Pressable>
         </View>
         <GoldButton block label={busy ? "Saving…" : "Done"} disabled={busy} onPress={() => void finish()} />
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

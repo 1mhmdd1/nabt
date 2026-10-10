@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { router } from "expo-router";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { getFirebase } from "../../src/firebase";
 import { StyleSheet, Text, View } from "react-native";
 import { Screen } from "../../src/components/Chrome";
 import { Gate, Gold, Outline, useScreen } from "../../src/components/voice/Kit";
 import { StaffBar } from "../care/case";
 import { C, t } from "../../src/theme";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Row = { initial: string; nickname: string; when: string; title: string; needs: string[]; note: string; status: string };
 type Copy = {
@@ -31,8 +35,18 @@ export default function SaAccommodations() {
 function Body() {
   const copy = useScreen<Copy>("saAccommodation");
   const [arranged, setArranged] = useState(false);
+  const firstNick = copy?.rows[0]?.nickname || "";
+  // Arranged is kept on a small status doc, so it stays marked after leaving the screen.
+  useEffect(() => {
+    if (!firstNick) return;
+    return onSnapshot(doc(getFirebase().db, "accommodationStatus", firstNick), (snap) => setArranged(snap.data()?.status === "arranged"));
+  }, [firstNick]);
   if (!copy) return null;
   const [first, ...rest] = copy.rows;
+  const markArranged = () => {
+    setArranged(true);
+    void setDoc(doc(getFirebase().db, "accommodationStatus", first.nickname), { status: "arranged", at: Date.now() }).catch(() => undefined);
+  };
   return (
     <Screen bg={C.ground}>
       <Text style={styles.brand}>NABT · {copy.brand}</Text>
@@ -42,7 +56,7 @@ function Body() {
           <Text style={t(600, 12, 16)}>{copy.chip}</Text>
         </View>
       </View>
-      <View style={{ paddingHorizontal: 20, paddingBottom: 110 }}>
+      <ScrollBody nav contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={[styles.case, styles.sel]}>
           <View style={styles.r1}>
             <View style={styles.av}>
@@ -71,11 +85,11 @@ function Body() {
           <Text style={styles.hint}>{copy.hint}</Text>
           {arranged ? null : (
             <View style={{ marginTop: 12 }}>
-              <Gold label={copy.mark} onPress={() => setArranged(true)} />
+              <Gold label={copy.mark} onPress={markArranged} />
             </View>
           )}
           <View style={{ marginTop: 8 }}>
-            <Outline label={copy.message} onPress={() => setArranged(true)} />
+            <Outline label={copy.message} onPress={() => router.push("/staff/safety/outreach?caseId=fig-shared" as never)} />
           </View>
         </View>
         {rest.map((row) => (
@@ -92,7 +106,7 @@ function Body() {
           </View>
         ))}
         <Text style={styles.foot}>{copy.foot}</Text>
-      </View>
+      </ScrollBody>
       <StaffBar active="Events" />
     </Screen>
   );

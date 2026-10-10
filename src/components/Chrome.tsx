@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C, t } from "../theme";
 
@@ -29,7 +29,10 @@ export function Screen({
   return (
     <View style={[styles.screen, { backgroundColor: bg }]}>
       {paddedTop ? <StatusBarChrome /> : null}
-      <View style={styles.body}>{children}</View>
+      {/* iOS lifts the content above the keyboard; Android resizes the window (app.json softwareKeyboardLayoutMode). */}
+      <KeyboardAvoidingView style={styles.body} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        {children}
+      </KeyboardAvoidingView>
       <HomeIndicator />
     </View>
   );

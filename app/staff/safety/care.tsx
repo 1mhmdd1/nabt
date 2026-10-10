@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Avatar, Chip, GoldButton, StaffFrame } from "../../../src/components/staff/StaffChrome";
@@ -16,7 +17,7 @@ export default function CareCase() {
   }
   return (
     <StaffFrame title="Care signal" chip="No content" back="/staff/safety" tab="safety" goldQuiet>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <View style={styles.who}>
           <Avatar letter={item.initial || "Q"} />
           <View style={{ flex: 1 }}>
@@ -59,6 +60,7 @@ export default function CareCase() {
         <View style={{ marginTop: 8 }}>
           <Chip label={item.careLabel || "Needs care"} on />
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

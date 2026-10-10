@@ -1,3 +1,4 @@
+import { NavSpacer } from "../../../src/components/navSpace";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Sev, SmallButton, StaffFrame } from "../../../src/components/staff/StaffChrome";
@@ -9,7 +10,7 @@ export default function Held() {
   const held = heldAll.filter((h) => h.status === "held");
   return (
     <StaffFrame title="Held content" chip={String(held.length)} tab="safety">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 120, gap: 8 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, gap: 8 }}>
         {held.map((h) => (
           <View key={h.id} style={styles.case}>
             <View style={styles.r1}>
@@ -32,6 +33,7 @@ export default function Held() {
             Held by the on-phone filter. If the wording suggests distress, the author already got a private support card.
           </Text>
         </View>
+        <NavSpacer />
       </ScrollView>
     </StaffFrame>
   );

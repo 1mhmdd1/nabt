@@ -65,7 +65,7 @@ export default function BoardRoles() {
 
   return (
     <Screen>
-      <SubHead title={headline} chip={isChair ? "CHAIR" : undefined} />
+      <SubHead title={headline} chip={isChair ? "CHAIR" : undefined} chipGold={false} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}>
         <Muted>Applies only inside {circle?.name || "this Circle"} (Verified). Regular Circles have no roles.</Muted>
         {!isChair ? <Muted>Only the Chair can assign roles.</Muted> : null}

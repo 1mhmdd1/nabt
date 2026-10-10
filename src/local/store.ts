@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
 import { buildSeed, type SeedAccount, type SeedBlob } from "./seed";
 import { Timestamp } from "./time";
 
@@ -92,15 +93,22 @@ async function persistNow() {
   }
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", () => {
-    if (persistTimer) {
-      clearTimeout(persistTimer);
-      persistTimer = null;
-    }
-    if (ready) void persistNow();
-  });
+function flushPersist() {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  if (ready) void persistNow();
 }
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("pagehide", flushPersist);
+}
+
+// On a phone the app can be killed from the background before the debounce fires.
+AppState.addEventListener("change", (state) => {
+  if (state !== "active") flushPersist();
+});
 
 function finish() {
   ready = true;

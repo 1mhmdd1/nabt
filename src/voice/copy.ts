@@ -30,7 +30,7 @@ export const voiceCopy = {
     skip: "Not now, I’m okay",
     footer: "Only you see this. The recording is already deleted.",
     suggestions: [
-      { title: "Breathe for two minutes", sub: "In for 4 · out for 6", href: "/n/engineering" },
+      { title: "Breathe for two minutes", sub: "In for 4 · out for 6", href: "/breathe" },
       { title: "Say hi to your Circle", sub: "A quiet hello is enough", href: "/chats" },
       { title: "Talk to a counselor", sub: "Anonymous · nickname only", href: "/support" },
     ],

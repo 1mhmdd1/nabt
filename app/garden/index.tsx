@@ -11,6 +11,7 @@ import { C, t } from "../../src/theme";
 import { saveHideGarden } from "../../src/live";
 import { useNodeRewards } from "../../src/live/nodeRewards";
 import { useNabt } from "../../src/state";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 const SPOTS = [
   { left: 46, top: 66, w: 78, h: 54 },
@@ -46,7 +47,7 @@ export default function Garden() {
           <Text style={[t(600, 11.5, 12), { color: C.white }]}>{hide ? "Show count" : "Hide count"}</Text>
         </Pressable>
       </View>
-      <View style={styles.pad}>
+      <ScrollBody nav contentContainerStyle={styles.pad}>
         <Text style={[t(600, 15, 18), { marginTop: 6 }]}>
           {hide ? "Garden count hidden" : `${count} lotuses`}
           <Text style={{ color: C.w64, fontWeight: "500" }}> · {rewards.sproutLabel || "4th sprouting"}</Text>
@@ -113,7 +114,7 @@ export default function Garden() {
             <View style={{ width: `${Math.round(ratio * 100)}%`, height: 6, borderRadius: 3, backgroundColor: C.white }} />
           </View>
         </Pressable>
-      </View>
+      </ScrollBody>
       <FloatingNav active="me" open={open} onToggle={() => setOpen((v) => !v)} />
     </Screen>
   );

@@ -7,6 +7,7 @@ import { nabtMarkSvg } from "../../art/nabtMarkSvg";
 import { Screen } from "../Chrome";
 import { IconClose, IconLotus } from "../Icons";
 import { C, shadow, t } from "../../theme";
+import { NAV_HEIGHT, useKeyboardOpen, useNavBottom } from "../navSpace";
 
 export type StaffTab = "overview" | "events" | "safety" | "reviews" | "none";
 
@@ -156,7 +157,7 @@ export function Seg({
 
 export function Pills({ items, value, onChange }: { items: string[]; value: string; onChange: (v: string) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
+    <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
       {items.map((item) => {
         const on = item === value || item.startsWith(value);
         return (
@@ -261,10 +262,12 @@ export function StaffNav({ active, quiet, initialOpen }: { active: StaffTab; qui
   const order: StaffTab[] = ["overview", "events", "safety", "reviews"];
   const slot = Math.max(0, order.indexOf(active));
   const lefts = ["10%", "30%", "70%", "90%"] as const;
+  const bottom = useNavBottom();
+  if (useKeyboardOpen()) return null;
   return (
     <>
       {open ? <Pressable style={styles.navScrim} onPress={() => setOpen(false)} accessibilityLabel="Close create menu" /> : null}
-      <View style={[styles.navWrap, { pointerEvents: "box-none" }]}>
+      <View style={[styles.navWrap, { bottom, pointerEvents: "box-none" }]}>
         {open ? (
           <Animated.View entering={FadeInDown.duration(380)} style={styles.menu} accessibilityRole="menu">
             {MENU.map((item, i) => (
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
   sheet: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.card, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28 },
   grab: { width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", alignSelf: "center", marginBottom: 14 },
   navScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: C.scrim, zIndex: 29 },
-  navWrap: { position: "absolute", left: 12, right: 12, bottom: 24, height: 64, zIndex: 30, overflow: "visible" },
+  navWrap: { position: "absolute", left: 12, right: 12, height: NAV_HEIGHT, zIndex: 30, overflow: "visible" },
   bar: { ...StyleSheet.absoluteFillObject, borderRadius: 999, backgroundColor: C.raised, borderWidth: 1, borderColor: C.w10, boxShadow: shadow.nav, flexDirection: "row", alignItems: "center", overflow: "visible" },
   pillBg: { position: "absolute", top: 9, width: 52, height: 30, marginLeft: -26, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.14)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   tab: { flex: 1, height: "100%", alignItems: "center", justifyContent: "center" },

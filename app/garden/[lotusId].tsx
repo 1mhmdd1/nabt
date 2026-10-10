@@ -5,6 +5,7 @@ import { LotusArt } from "../../src/components/LotusArt";
 import { BackBar, GhostButton, useScreenReady } from "../../src/components/NodeChrome";
 import { C, t } from "../../src/theme";
 import { useNodeRewards } from "../../src/live/nodeRewards";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 export default function LotusStory() {
   const { lotusId } = useLocalSearchParams<{ lotusId: string }>();
@@ -21,7 +22,7 @@ export default function LotusStory() {
   return (
     <Screen>
       <BackBar title={`Lotus #${lotus.n}`} />
-      <View style={{ paddingHorizontal: 24, alignItems: "center" }}>
+      <ScrollBody contentContainerStyle={{ paddingHorizontal: 24, alignItems: "center", paddingBottom: 24 }}>
         <LotusArt width={180} height={124} />
         <Text style={[t(700, 26, 32), { marginTop: 16 }]}>{lotus.name}</Text>
         <Text style={[t(500, 14, 20), { marginTop: 6, color: C.w80, textAlign: "center" }]}>
@@ -49,7 +50,7 @@ export default function LotusStory() {
         <Pressable onPress={() => router.push("/rewards/name" as never)} style={{ marginTop: 12 }}>
           <Text style={[t(600, 14, 18), { color: C.w80 }]}>Name your bloom</Text>
         </Pressable>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

@@ -7,6 +7,7 @@ import { C, t } from "../src/theme";
 import { useNabt, type Mood } from "../src/state";
 import { recordCheckIn } from "../src/live";
 import { noteHeavyCheckIn } from "../src/voice/journal";
+import { ScrollBody } from "../src/components/ScrollBody";
 
 const MOODS: Mood[] = ["Heavy", "Tired", "Okay", "Lighter", "Good"];
 
@@ -25,7 +26,7 @@ export default function CheckIn() {
         </Pressable>
         <Text style={styles.h}>Calm check-in</Text>
       </View>
-      <View style={styles.body}>
+      <ScrollBody contentContainerStyle={[styles.body, { paddingBottom: 24 }]}>
         <IconWordLotus width={48} height={32} />
         <Text style={styles.q}>How does right now feel?</Text>
         <View style={styles.cos}>
@@ -66,7 +67,7 @@ export default function CheckIn() {
           }}
         />
         </View>
-      </View>
+      </ScrollBody>
     </Screen>
   );
 }

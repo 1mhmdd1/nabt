@@ -22,6 +22,8 @@ import { create } from "zustand";
 import { getFirebase } from "../firebase";
 import { reviewOutgoing } from "../moderation/outgoing";
 import { toast } from "../toast";
+import { useEffect, useState } from "react";
+import { me, useCampus } from "../live";
 
 /** Counts between 1 and this floor are hidden so a small group cannot be identified. Zero stays zero. */
 export const PRIVACY_MIN = 5;
@@ -49,6 +51,9 @@ export type ImpactNumbers = {
   newMembers: number;
   avgRating?: number;
   certificatesIssued?: number;
+  moodCheckIns?: number;
+  supportHandled?: number;
+  medianFirstReply?: string;
   top: TopCommunity[];
   weeks: WeekPoint[];
 };
@@ -96,6 +101,9 @@ export type YouSaid = {
   link?: string;
   date: string;
   createdAt: number;
+  /** Set when the update answers one petition or one Circle; otherwise it is campus-wide. */
+  petitionId?: string;
+  circleId?: string;
 };
 
 type ImpactState = {
@@ -180,7 +188,38 @@ function mapYouSaid(id: string, data: DocumentData): YouSaid {
     link: data.link ? String(data.link) : undefined,
     date: String(data.date || ""),
     createdAt: millis(data.createdAt),
+    petitionId: data.petitionId ? String(data.petitionId) : undefined,
+    circleId: data.circleId ? String(data.circleId) : undefined,
   };
+}
+
+/**
+ * "You said, we did" for one student: campus-wide updates, plus updates on petitions they signed
+ * and Circles they belong to. Nothing about other people's petitions or Circles.
+ */
+export function useMyYouSaid() {
+  const rows = useImpact((s) => s.youSaid);
+  const members = useCampus((s) => s.members);
+  const uid = useCampus((s) => (s.ready ? me() : ""));
+  const [signed, setSigned] = useState<Record<string, boolean>>({});
+  const petitionIds = Array.from(new Set(rows.map((r) => r.petitionId).filter((v): v is string => Boolean(v)))).join(",");
+  useEffect(() => {
+    if (!uid || !petitionIds) return;
+    const { db } = getFirebase();
+    const stops = petitionIds.split(",").map((pid) =>
+      onSnapshot(
+        doc(db, "petitions", pid, "signatures", uid),
+        (snap) => setSigned((cur) => ({ ...cur, [pid]: snap.exists() })),
+        () => undefined,
+      ),
+    );
+    return () => stops.forEach((stop) => stop());
+  }, [uid, petitionIds]);
+  return rows.filter((row) => {
+    if (row.petitionId) return Boolean(signed[row.petitionId]);
+    if (row.circleId) return (members[row.circleId] || []).some((m) => m.id === uid);
+    return true;
+  });
 }
 
 function mapImpact(data: DocumentData): ImpactNumbers {
@@ -199,6 +238,9 @@ function mapImpact(data: DocumentData): ImpactNumbers {
   };
   if (typeof data.avgRating === "number") impact.avgRating = data.avgRating;
   if (typeof data.certificatesIssued === "number") impact.certificatesIssued = data.certificatesIssued;
+  if (typeof data.moodCheckIns === "number") impact.moodCheckIns = data.moodCheckIns;
+  if (typeof data.supportHandled === "number") impact.supportHandled = data.supportHandled;
+  if (typeof data.medianFirstReply === "string") impact.medianFirstReply = data.medianFirstReply;
   return impact;
 }
 

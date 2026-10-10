@@ -1,10 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { router } from "expo-router";
 import { Gate, Gold, Outline, Sheet, useScreen } from "../../src/components/voice/Kit";
 import { setVoiceCheckins, useVoiceSafety } from "../../src/live/voiceSafety";
 import { C, t } from "../../src/theme";
 import SettingsPage from "./index";
 import { voiceCopy } from "../../src/voice/copy";
+import { ScrollBody } from "../../src/components/ScrollBody";
 
 type Copy = { title: string; body: string; toggle: string; toggleSub: string; points: string[]; care: string; careSub: string; on: string; off: string; skip: string };
 
@@ -24,39 +25,42 @@ function SheetBody() {
   const seeded = useScreen<Copy>("voiceSheet");
   const copy = seeded ?? voiceCopy.sheet;
   const on = useVoiceSafety((s) => s.voiceOn);
+  const { height } = useWindowDimensions();
   return (
     <>
       <View style={styles.scrim} />
       <Sheet title={copy.title}>
-        <Text style={styles.body}>{copy.body}</Text>
-        <View style={styles.toggleRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={t(600, 14.5, 18)}>{copy.toggle}</Text>
-            <Text style={styles.small}>{copy.toggleSub}</Text>
+        <ScrollBody style={{ flex: 0, maxHeight: height * 0.7 }}>
+          <Text style={styles.body}>{copy.body}</Text>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={t(600, 14.5, 18)}>{copy.toggle}</Text>
+              <Text style={styles.small}>{copy.toggleSub}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityLabel={copy.toggle}
+              accessibilityState={{ checked: on }}
+              onPress={() => void setVoiceCheckins(!on).catch(() => undefined)}
+              style={[styles.tg, on && styles.tgOn]}
+            >
+              <View style={[styles.knob, on && { marginLeft: 18, backgroundColor: C.burgundy }]} />
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityLabel={copy.toggle}
-            accessibilityState={{ checked: on }}
-            onPress={() => void setVoiceCheckins(!on).catch(() => undefined)}
-            style={[styles.tg, on && styles.tgOn]}
-          >
-            <View style={[styles.knob, on && { marginLeft: 18, backgroundColor: C.burgundy }]} />
+          {copy.points.map((p) => (
+            <Text key={p} style={styles.point}>
+              {p}
+            </Text>
+          ))}
+          <Pressable style={styles.care} onPress={() => router.push("/care/explainer" as never)}>
+            <Text style={t(600, 14, 18)}>{copy.care}</Text>
+            <Text style={styles.small}>{copy.careSub}</Text>
           </Pressable>
-        </View>
-        {copy.points.map((p) => (
-          <Text key={p} style={styles.point}>
-            {p}
-          </Text>
-        ))}
-        <Pressable style={styles.care} onPress={() => router.push("/care/explainer" as never)}>
-          <Text style={t(600, 14, 18)}>{copy.care}</Text>
-          <Text style={styles.small}>{copy.careSub}</Text>
-        </Pressable>
-        <View style={{ marginTop: 10 }}>
-          <Gold label={on ? copy.off : copy.on} onPress={() => void setVoiceCheckins(!on).catch(() => undefined)} />
-        </View>
-        <Outline label={copy.skip} ghost onPress={() => router.back()} />
+          <View style={{ marginTop: 10 }}>
+            <Gold label={on ? copy.off : copy.on} onPress={() => void setVoiceCheckins(!on).catch(() => undefined)} />
+          </View>
+          <Outline label={copy.skip} ghost onPress={() => router.back()} />
+        </ScrollBody>
       </Sheet>
     </>
   );

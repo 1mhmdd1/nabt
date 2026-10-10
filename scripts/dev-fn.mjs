@@ -202,11 +202,11 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-  if (req.url === "/issue-certificates" || req.url === "/feedback-tally" || req.url === "/confirm-graduation" || req.url === "/mentor-respond") {
+  if (req.url === "/issue-certificates" || req.url === "/end-event" || req.url === "/event-code" || req.url === "/event-by-code" || req.url === "/event-check-in" || req.url === "/feedback-tally" || req.url === "/mentor-respond") {
     try {
       const body = JSON.parse(await readBody(req));
       const actorUid = await callerUid(req);
-      if (!actorUid && (req.url === "/confirm-graduation" || req.url === "/issue-certificates" || req.url === "/mentor-respond")) {
+      if (!actorUid && req.url !== "/feedback-tally") {
         res.statusCode = 401;
         res.end("sign in first");
         return;
@@ -214,16 +214,23 @@ const server = http.createServer(async (req, res) => {
       const result =
         req.url === "/issue-certificates"
           ? await issueCertificates(body, actorUid)
-          : req.url === "/feedback-tally"
-            ? await tallyFeedback(String(body.eventId || ""))
-            : req.url === "/confirm-graduation"
-              ? await confirmGraduation(actorUid, Number(body.classYear))
-              : await openMentorChat(String(body.requestId || ""), actorUid);
+          : req.url === "/end-event"
+            ? await endEventRoute(body, actorUid)
+            : req.url === "/event-code"
+              ? await eventCodeRoute(body, actorUid)
+              : req.url === "/event-by-code"
+                ? await eventByCode(body)
+              : req.url === "/event-check-in"
+                ? await eventCheckIn(body, actorUid)
+                : req.url === "/feedback-tally"
+                  ? await tallyFeedback(String(body.eventId || ""))
+                  : await openMentorChat(String(body.requestId || ""), actorUid);
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ ok: true, ...result }));
     } catch (err) {
-      res.statusCode = 500;
-      res.end(String(err));
+      res.statusCode = err?.status || 500;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ ok: false, message: String(err?.message || err) }));
     }
     return;
   }
@@ -581,9 +588,14 @@ async function issueEvent(eventId) {
   return { issued: attendance.size, created };
 }
 
-async function issueCertificates(body) {
-  if (body.eventId) return issueEvent(String(body.eventId));
+async function issueCertificates(body, uid) {
+  if (body.eventId) {
+    await requireOrganizer(String(body.eventId), uid);
+    return issueEvent(String(body.eventId));
+  }
   const circleId = String(body.circleId || "");
+  const circle = await db.doc(`circles/${circleId}`).get();
+  if (circle.data()?.chairUid !== uid) throw refuse(403, "Only the Chair can issue certificates.");
   const snap = await db.collection("events").where("hostId", "==", circleId).get();
   let issued = 0;
   let created = 0;
@@ -692,30 +704,80 @@ async function tallyFeedback(eventId) {
   return { count };
 }
 
-async function confirmGraduation(uid, classYear) {
-  if (!uid) throw new Error("Sign in first.");
-  const year = Number(classYear);
-  const max = new Date().getFullYear() + 1;
-  if (!Number.isInteger(year) || year < 1990 || year > max) throw new Error("Enter your class year.");
-  await db.doc(`users/${uid}`).set({ role: "alumni", roleLabel: "Alumni", classYear: year, alumni: true }, { merge: true });
+function refuse(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+async function isSA(uid) {
   try {
     const user = await getAuth().getUser(uid);
-    await getAuth().setCustomUserClaims(uid, { ...(user.customClaims || {}), status: "approved", role: "alumni" });
+    return user.customClaims?.sa === true || user.customClaims?.counselor === true;
   } catch {
-    /* Auth emulator may be down. The user document still records the confirmation. */
+    return false;
   }
-  await db.collection("auditLogs").add({
-    category: "role",
-    action: "Graduation confirmed",
-    title: `Class of ${year}`,
-    detail: uid,
-    actorUid: uid,
-    actor: "Student",
-    target: `users/${uid}`,
-    when: "Just now",
-    at: Timestamp.now(),
-  });
-  return { uid, classYear: year };
+}
+
+/** The organizer of an event: its Circle's Chair, or Student Affairs for an OSA event. */
+async function requireOrganizer(eventId, uid) {
+  const snap = await db.doc(`events/${eventId}`).get();
+  if (!snap.exists) throw refuse(404, "That event is gone.");
+  const event = snap.data();
+  if (event.hostType === "circle") {
+    const circle = await db.doc(`circles/${event.hostId}`).get();
+    if (circle.data()?.chairUid !== uid) throw refuse(403, "Only the event’s organizer can do that.");
+  } else if (!(await isSA(uid))) {
+    throw refuse(403, "Only the event’s organizer can do that.");
+  }
+  return event;
+}
+
+async function eventCodeRoute(body, uid) {
+  const eventId = String(body.eventId || "");
+  await requireOrganizer(eventId, uid);
+  const ref = db.doc(`eventCodes/${eventId}`);
+  let code = String((await ref.get()).data()?.code || "");
+  if (!code) {
+    code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    await ref.set({ code, at: Timestamp.now() });
+  }
+  return { code };
+}
+
+/** The typed code under the organizer's QR, for when the camera can't scan. Writes nothing. */
+async function eventByCode(body) {
+  const code = String(body.code || "").trim().toUpperCase();
+  const snap = code ? await db.collection("eventCodes").where("code", "==", code).limit(1).get() : null;
+  if (!snap || snap.empty) throw refuse(404, "That code doesn’t match an event. Check the code under the QR.");
+  return { eventId: snap.docs[0].id };
+}
+
+/** Attendance is written only here, and only with the code from the organizer's QR. */
+async function eventCheckIn(body, uid) {
+  const eventId = String(body.eventId || "");
+  const snap = await db.doc(`events/${eventId}`).get();
+  if (!snap.exists) throw refuse(404, "That event is gone.");
+  const event = snap.data();
+  const result = { title: String(event.title || "Event"), hostId: String(event.hostId || ""), hostType: String(event.hostType || ""), verified: event.verified !== false, nodeId: String(event.nodeId || "") };
+  const row = db.doc(`events/${eventId}/attendance/${uid}`);
+  if ((await row.get()).exists) return { ...result, already: true };
+  const code = String((await db.doc(`eventCodes/${eventId}`).get()).data()?.code || "");
+  if (!code || String(body.code || "").trim().toUpperCase() !== code) throw refuse(403, "Scan the organizer’s QR at the event to check in.");
+  if (event.ended === true) throw refuse(409, "This event has ended.");
+  if (event.hostType === "circle" && !(await db.doc(`circles/${event.hostId}/members/${uid}`).get()).exists) {
+    throw refuse(403, "This check-in is for members of the Circle.");
+  }
+  const user = (await db.doc(`users/${uid}`).get()).data() || {};
+  await row.set({ uid, nickname: String(user.nickname || "Member"), at: Timestamp.now() });
+  return { ...result, already: false };
+}
+
+async function endEventRoute(body, uid) {
+  const eventId = String(body.eventId || "");
+  await requireOrganizer(eventId, uid);
+  await db.doc(`events/${eventId}`).set({ ended: true }, { merge: true });
+  return issueEvent(eventId);
 }
 
 async function openMentorChat(requestId, actorUid) {

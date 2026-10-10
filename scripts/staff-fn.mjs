@@ -226,7 +226,7 @@ export async function handleStaffRequest(req, res, db, actorUid) {
         json(res, 400, { ok: false });
         return;
       }
-      await db.doc(`users/${body.uid}`).set({ status, role: "student", roleLabel: "Student" }, { merge: true });
+      await db.doc(`users/${body.uid}`).set({ status }, { merge: true });
       // The token carries the status; rules read it from there.
       try {
         const user = await getAuth().getUser(body.uid);
@@ -253,6 +253,24 @@ export async function handleStaffRequest(req, res, db, actorUid) {
         reviewerUid: actor.uid,
       });
       json(res, 200, { ok: true });
+      return;
+    }
+    if (url === "/staff/graduate") {
+      // Only Student Affairs graduates an account to alumni, with a class year.
+      const year = Number(body.classYear);
+      if (!body.uid || !Number.isInteger(year) || year < 1990 || year > new Date().getFullYear() + 1) {
+        json(res, 400, { ok: false, error: "Pick the account and a class year." });
+        return;
+      }
+      await db.doc(`users/${body.uid}`).set({ role: "alumni", roleLabel: "Alumni", alumni: true, classYear: year }, { merge: true });
+      try {
+        const user = await getAuth().getUser(body.uid);
+        await getAuth().setCustomUserClaims(body.uid, { ...(user.customClaims || {}), role: "alumni", alumni: true });
+      } catch {
+        /* no Auth record (seeded uid): the profile still changes */
+      }
+      await audit(db, { category: "role", action: "Graduated to alumni", title: `Class of ${year}`, detail: body.uid, actor: "Student Affairs", actorUid: actor.uid, target: `users/${body.uid}` });
+      json(res, 200, { ok: true, classYear: year });
       return;
     }
     if (url === "/staff/case") {
