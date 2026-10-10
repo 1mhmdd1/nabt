@@ -51,6 +51,9 @@ export type ImpactNumbers = {
   newMembers: number;
   avgRating?: number;
   certificatesIssued?: number;
+  moodCheckIns?: number;
+  supportHandled?: number;
+  medianFirstReply?: string;
   top: TopCommunity[];
   weeks: WeekPoint[];
 };
@@ -235,6 +238,9 @@ function mapImpact(data: DocumentData): ImpactNumbers {
   };
   if (typeof data.avgRating === "number") impact.avgRating = data.avgRating;
   if (typeof data.certificatesIssued === "number") impact.certificatesIssued = data.certificatesIssued;
+  if (typeof data.moodCheckIns === "number") impact.moodCheckIns = data.moodCheckIns;
+  if (typeof data.supportHandled === "number") impact.supportHandled = data.supportHandled;
+  if (typeof data.medianFirstReply === "string") impact.medianFirstReply = data.medianFirstReply;
   return impact;
 }
 

@@ -440,7 +440,8 @@ async function openStaff(db: ReturnType<typeof getFirebase>["db"], user: User) {
     });
     watch(collection(db, "circles"), (snap) => {
       fromLive = snap.docs
-        .filter((d) => d.data().kind === "community")
+        // Communities waiting on verification are in Reviews → Verify, not here.
+        .filter((d) => d.data().kind === "community" && d.data().verified === true)
         .map((d) => {
           const data = d.data();
           return {

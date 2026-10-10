@@ -70,8 +70,9 @@ function ChairDashboardScreen() {
     .filter((m): m is NonNullable<typeof m> => Boolean(m));
   const roster = useEventRoster(liveEvent?.id || "");
   const here = roster?.length ?? 0;
-  const bars = [...(circle?.attendance || [])].slice(-5);
-  if (liveEvent && here > 0) bars[bars.length - 1] = here;
+  // Past events, then tonight's live count once people check in.
+  const bars = [...(circle?.attendance || []), ...(liveEvent && here > 0 ? [here] : [])].slice(-5);
+  const barMax = Math.max(1, ...bars);
   const needs = circle?.needs || [];
 
   return (
@@ -165,24 +166,11 @@ function ChairDashboardScreen() {
             <Eyebrow>Attendance · last 5</Eyebrow>
             <Svg width="100%" height={40} viewBox="0 0 100 36" style={{ marginTop: 6 }}>
               {bars.map((value, i) => {
-                const x = i * 22;
-                const solid = Math.max(4, Math.round((value / 30) * 16));
-                const light = Math.max(2, Math.round((value / 30) * 6));
-                const y = 36 - light - solid;
-                return (
-                  <Rect key={i} x={x} y={y} width={14} height={solid} rx={2} fill="#fff" />
-                );
-              })}
-              {bars.map((value, i) => {
-                const x = i * 22;
-                const light = Math.max(2, Math.round((value / 30) * 6));
-                const y = 36 - light;
-                return (
-                  <Rect key={`n${i}`} x={x} y={y} width={14} height={light} rx={2} fill="#fff" fillOpacity={0.4} />
-                );
+                const h = Math.max(3, Math.round((value / barMax) * 34));
+                return <Rect key={i} x={i * 22} y={36 - h} width={14} height={h} rx={2} fill="#fff" fillOpacity={i === bars.length - 1 ? 1 : 0.55} />;
               })}
             </Svg>
-            <Muted>{bars.length ? "Solid returning · light new" : "No events yet"}</Muted>
+            <Muted>{bars.length ? `People at each event · last ${bars[bars.length - 1]}` : "No events yet"}</Muted>
             {liveEvent ? (
               <Pressable onPress={() => router.push(`/e/${liveEvent.id}/checkin` as never)}>
                 <Muted>

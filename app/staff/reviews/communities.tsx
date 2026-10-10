@@ -16,7 +16,7 @@ export default function Communities() {
     <StaffFrame title="Communities" chip={`${rows.length} verified`} tab="overview">
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 }}>
         <View style={styles.kpis}>
-          <Kpi n={String(members)} l="Active members" />
+          <Kpi n={String(members)} l="Members" />
           <Kpi n={String(eventCount)} l="Events" />
           <Kpi n={String(requests)} l="Venue requests" />
         </View>
@@ -28,7 +28,7 @@ export default function Communities() {
               <Chip label={r.next || ""} />
             </View>
             <View style={styles.hs}>
-              <Text style={t(600, 13, 16)}><Text style={t(700, 13, 16)}>{r.members} </Text>active members</Text>
+              <Text style={t(600, 13, 16)}><Text style={t(700, 13, 16)}>{r.members} </Text>members</Text>
               <Text style={t(600, 13, 16)}><Text style={t(700, 13, 16)}>{r.last} </Text>last event</Text>
               <Text style={t(600, 13, 16)}><Text style={t(700, 13, 16)}>{r.requests} </Text>venue requests</Text>
             </View>

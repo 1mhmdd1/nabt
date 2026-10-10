@@ -157,7 +157,7 @@ export function Seg({
 
 export function Pills({ items, value, onChange }: { items: string[]; value: string; onChange: (v: string) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
+    <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
       {items.map((item) => {
         const on = item === value || item.startsWith(value);
         return (

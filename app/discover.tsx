@@ -167,11 +167,11 @@ export default function Discover() {
                   {(event.faces || []).map((letter) => (
                     <View key={letter} style={styles.face}><Text style={[t(600, 11, 12), { color: C.gold }]}>{letter}</Text></View>
                   ))}
-                  <Text style={[t(500, 12.5, 16), { color: C.w64, marginLeft: 14 }]}>{event.rsvpCount} going</Text>
+                  <Text style={[t(500, 12.5, 16), { color: C.w64, marginLeft: 14 }]}>{(event.rsvpCount || 0) + (community.rsvpCounts[event.id] || 0)} going</Text>
                 </View>
-                <Pressable onPress={() => void rsvpEvent(event.id, !community.myRsvps[event.id])} style={styles.going}>
-                  <IconCheck size={14} color={C.burgundy} />
-                  <Text style={[t(700, 13.5, 16), { color: C.burgundy }]}>Going</Text>
+                <Pressable accessibilityRole="button" onPress={() => void rsvpEvent(event.id, !community.myRsvps[event.id])} style={styles.going}>
+                  {community.myRsvps[event.id] ? <IconCheck size={14} color={C.burgundy} /> : null}
+                  <Text style={[t(700, 13.5, 16), { color: C.burgundy }]}>{community.myRsvps[event.id] ? "Going" : "I’ll go"}</Text>
                 </Pressable>
               </View>
             </Card>

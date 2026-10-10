@@ -1,6 +1,7 @@
 import { DEMO_PASSWORD } from "./mode";
 import { voiceBundle } from "../voice/bundle";
 import { seedExamWeekExtra, seedPeerCircles } from "./seedCircles";
+import { seedCampus } from "./seedCampus";
 
 export type SeedAccount = {
   email: string;
@@ -27,12 +28,6 @@ function at(dayOffset: number, hour: number, minute = 0) {
   d.setDate(d.getDate() + dayOffset);
   d.setHours(hour, minute, 0, 0);
   return d.getTime();
-}
-
-function weekLabel(weeksAgo: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - weeksAgo * 7);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function user(
@@ -187,24 +182,6 @@ export function buildSeed(): SeedBlob {
     items: [],
     ask: null,
   });
-  put(`records/${ALUMNI}`, {
-    fullName: "Nour Saab",
-    totals: { events: 4, trainings: 1, mentoring: 2, board: 1 },
-    items: [
-      {
-        id: "alum-mentor",
-        kind: "mentoring",
-        title: "Mentor hours",
-        circle: "Robotics Society",
-        dateLabel: "2024",
-        role: "mentor",
-        semester: "Class of 2024",
-        code: "NB-2019",
-      },
-    ],
-    ask: null,
-  });
-
   put("circles/robotics", {
     name: "Robotics Society",
     kind: "community",
@@ -270,42 +247,6 @@ export function buildSeed(): SeedBlob {
     createdAt: Date.now() - 1 * hour,
   });
 
-  put("circles/film", {
-    name: "Film Society",
-    kind: "community",
-    verified: true,
-    anonymous: false,
-    chairUid: "uid-film-chair",
-    charter: "Screenings and a short talk after the lights come up.",
-    officialLine: "Official UA club",
-    memberCount: 16,
-    order: 2,
-  });
-  member(put, "film", "uid-film-chair", "Lea", 1, ["chair"]);
-  put("circles/debate", {
-    name: "Debate Club",
-    kind: "community",
-    verified: true,
-    anonymous: false,
-    chairUid: "uid-debate-chair",
-    charter: "One topic, two sides, and a chair who keeps it kind.",
-    officialLine: "Official UA club",
-    memberCount: 12,
-    order: 3,
-  });
-  member(put, "debate", "uid-debate-chair", "Sami", 1, ["chair"]);
-  put("circles/green", {
-    name: "Green Campus",
-    kind: "community",
-    verified: true,
-    anonymous: false,
-    chairUid: "uid-green-chair",
-    charter: "Campus gardens, reuse drives, and a weekly walk.",
-    officialLine: "Official UA club",
-    memberCount: 9,
-    order: 4,
-  });
-  member(put, "green", "uid-green-chair", "Yara", 1, ["chair"]);
   seedPeerCircles(put);
   put("circles/exam-week", {
     name: "Exam week",
@@ -394,6 +335,7 @@ export function buildSeed(): SeedBlob {
     memberCount: 4,
     order: 9,
   });
+  ["Rami", "Lynn", "Chadi", "Maria"].forEach((name, index) => member(put, "cedar-club", index === 0 ? "uid-cedar-chair" : `uid-cedar-${index}`, name, index + 1, index === 0 ? ["chair"] : []));
 
   put("events/build-night", {
     title: "Robotics Build Night",
@@ -419,24 +361,6 @@ export function buildSeed(): SeedBlob {
     description: "Hands-on build night in the robotics lab.",
     ended: false,
   });
-  put("events/film-night", {
-    title: "Film Society screening",
-    hostLabel: "Film Society",
-    verified: true,
-    meta: "This week · Auditorium",
-    day: String(new Date(at(3, 18)).getDate()),
-    mon: new Date(at(3, 18)).toLocaleDateString("en-US", { month: "short" }),
-    whenLine: "In 3 days · 6:00 PM",
-    placeLine: "Auditorium",
-    blurb: "A short film and a quieter conversation after.",
-    status: "published",
-    hostType: "circle",
-    hostId: "film",
-    order: 2,
-    startsAt: at(3, 18),
-    endsAt: at(3, 20),
-    venueStatus: "approved",
-  });
   put("events/wellbeing-walk", {
     title: "Campus wellbeing walk",
     hostLabel: "Student Affairs",
@@ -447,6 +371,7 @@ export function buildSeed(): SeedBlob {
     whenLine: "Next week · 4:00 PM",
     placeLine: "Main gate",
     blurb: "A short walk. Come as you are.",
+    rsvpCount: 34,
     status: "published",
     hostType: "sa",
     hostId: "sa",
@@ -456,77 +381,6 @@ export function buildSeed(): SeedBlob {
     venueStatus: "approved",
   });
 
-  put("petitions/library-hours", {
-    title: "Later library hours",
-    text: "Keep the library open until midnight on exam weeks.",
-    signCount: 24,
-    goal: 80,
-    status: "published",
-    bucket: "open",
-    by: "Film Society",
-    topic: "Campus",
-    order: 1,
-    category: "campus",
-  });
-  put("petitions/quiet-rooms", {
-    title: "More quiet rooms",
-    text: "Two more quiet rooms in Block C during exams.",
-    signCount: 12,
-    goal: 40,
-    status: "pending",
-    bucket: "pending",
-    by: "Quiet Hour",
-    topic: "Space",
-    order: 2,
-  });
-  put("petitions/fountains", {
-    title: "Water fountains in Block B",
-    text: "Refill points on each floor of Block B.",
-    signCount: 8,
-    goal: 30,
-    status: "pending",
-    bucket: "pending",
-    by: "Green Campus",
-    topic: "Campus",
-    order: 3,
-  });
-  put("petitions/evening-bus", {
-    title: "Evening bus",
-    text: "One later bus on exam nights.",
-    signCount: 41,
-    goal: 40,
-    status: "pending",
-    bucket: "goal",
-    by: "Debate Club",
-    topic: "Transport",
-    short: "Evening bus",
-    order: 4,
-  });
-
-  put("venueRequests/vr-lab", {
-    queue: "pitch",
-    status: "sent",
-    circle: "Robotics Society",
-    circleId: "robotics",
-    title: "Build night room",
-    detail: "Robotics lab, this evening",
-    initial: "R",
-    time: "Today",
-    order: 1,
-    chairUid: "uid-robot-chair",
-  });
-  put("venueRequests/vr-screen", {
-    queue: "pitch",
-    status: "sent",
-    circle: "Film Society",
-    circleId: "film",
-    title: "Screening room",
-    detail: "Auditorium, later this week",
-    initial: "F",
-    time: "This week",
-    order: 2,
-    chairUid: "uid-film-chair",
-  });
   put("communityReviews/cedar-club", {
     status: "waiting",
     name: "Cedar Club",
@@ -537,97 +391,6 @@ export function buildSeed(): SeedBlob {
   put("venues/robotics-lab", { name: "Robotics lab", building: "Engineering" });
   put("venues/auditorium", { name: "Auditorium", building: "Main" });
 
-  put("announcements/library", {
-    title: "Library hours this exam week",
-    body: "The library stays open until 10 on weeknights.",
-    audience: "everyone",
-    audienceKey: "everyone",
-    verified: true,
-    status: "published",
-    authorUid: OSA,
-    createdAt: Date.now() - 2 * hour,
-  });
-  put("announcements/quiet", {
-    title: "Quiet rooms are open",
-    body: "Block C rooms 2 and 4 are unlocked after 6.",
-    audience: "everyone",
-    audienceKey: "everyone",
-    verified: true,
-    status: "published",
-    authorUid: OSA,
-    createdAt: Date.now() - 5 * hour,
-  });
-  put("announcements/walk", {
-    title: "Wellbeing walk",
-    body: "Meet at the main gate next week. No signup list.",
-    audience: "everyone",
-    audienceKey: "everyone",
-    verified: true,
-    status: "published",
-    authorUid: OSA,
-    createdAt: Date.now() - 26 * hour,
-  });
-  put("youSaid/quiet-rooms", {
-    title: "Quiet rooms during exams",
-    line: "Two rooms in Block C now stay open late on exam weeks.",
-    date: "This month",
-    source: "Student Affairs",
-    forEveryone: true,
-    authorUid: OSA,
-    createdAt: Date.now() - 3 * hour,
-  });
-
-  put("youSaid/library-hours", {
-    title: "Library hours: answer on the way",
-    line: "Student Affairs is costing a later closing time for exam weeks.",
-    date: "This week",
-    source: "Your petition",
-    petitionId: "library-hours",
-    authorUid: OSA,
-    createdAt: Date.now() - hour,
-  });
-
-  put("supportRequests/olive", {
-    uid: "uid-olive",
-    reason: "Stress or exams",
-    note: "The week feels heavy.",
-    nickname: "Olive",
-    contact: "anonymous",
-    status: "open",
-    at: Date.now() - 4 * hour,
-  });
-
-  const scores = [72, 68, 64, 30, 26, 61];
-  const exams = [false, false, false, true, true, false];
-  put("impact/fall-2026", {
-    semester: "Fall 2026",
-    events: 6,
-    checkIns: 48,
-    uniqueStudents: 120,
-    activeCircles: 6,
-    verifiedCommunities: 4,
-    newMembers: 11,
-    top: [{ id: "robotics", name: "Robotics Society", score: 18 }],
-    weeks: [5, 4, 3, 2, 1, 0].map((ago, index) => ({
-      label: weekLabel(ago),
-      score: scores[index],
-      exam: exams[index],
-    })),
-  });
-  put("staffOverview/week", {
-    chip: "This week",
-    kpis: [],
-    weeks: [
-      { label: "Mon", x: 20, bars: [{ y: 40, h: 50, o: 0.45 }] },
-      { label: "Tue", x: 70, bars: [{ y: 55, h: 35, o: 0.7 }] },
-      { label: "Wed", x: 120, bars: [{ y: 30, h: 60, o: 1 }] },
-    ],
-    legend: [
-      { label: "Calm", opacity: 0.45 },
-      { label: "Heavy", opacity: 1 },
-    ],
-    today: [{ title: "Robotics Build Night", sub: "Robotics lab · today", href: "/e/build-night" }],
-  });
   put(`staffProfile/${OSA}`, { name: "Maya Nassar", onCall: true });
 
   put(`alumniMentors/${ALUMNI}`, {
@@ -650,28 +413,7 @@ export function buildSeed(): SeedBlob {
     createdAt: Date.now() - 6 * hour,
   });
 
-  put("auditLogs/log-role", {
-    action: "Role change",
-    actor: "Campus Admin",
-    target: "201903318@ua.edu.lb",
-    when: "Sep 2026",
-    category: "role",
-    chip: "Staff",
-    title: "Student Affairs role",
-    detail: "Maya Nassar · 201903318@ua.edu.lb",
-    counselor: "",
-  });
-  put("auditLogs/log-reveal", {
-    action: "Reveal",
-    actor: "Maya Nassar",
-    target: "A support chat",
-    when: "Oct 2026",
-    category: "reveal",
-    chip: "Reveal",
-    title: "Identity reveal",
-    detail: "A counselor opened a name with a written reason.",
-    counselor: "Maya Nassar",
-  });
+  seedCampus(put, docs);
 
   put("voiceSafety/bundle", voiceBundle);
 

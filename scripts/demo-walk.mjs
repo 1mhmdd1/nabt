@@ -136,8 +136,8 @@ async function main() {
     await page.getByRole("tab", { name: "Discover" }).click();
     await page.getByText("Circles", { exact: true }).click();
     await see(page, "Robotics Society");
-    await see(page, "Film Society");
-    await see(page, "Debate Club");
+    await see(page, "Film Club");
+    await see(page, "Debate Society");
     await see(page, "Quiet Hour");
     await page.getByText("Robotics Society", { exact: true }).click();
     await see(page, "Verified");
@@ -210,9 +210,9 @@ async function main() {
     await see(page, "You said, we did");
     await see(page, "Later library hours");
     await page.getByRole("button", { name: "Sign Later library hours" }).click();
-    await see(page, "25 signatures");
+    await see(page, "87 signatures");
     await scrollTo(page, "You said, we did");
-    await see(page, "Quiet rooms during exams");
+    await see(page, "A quiet study room");
     await shot(page, "10-petition-you-said.png");
     pass("petition");
 
@@ -234,8 +234,8 @@ async function main() {
     pass("mentor request");
 
     await switchTo(page, "201903318@ua.edu.lb", /\/staff\/overview/);
-    await see(page, "Check-ins");
-    await see(page, "49");
+    await see(page, "Event check-ins");
+    await see(page, "1151");
     await setScroll(page, 0);
     await shot(page, "02-osa-impact.png");
     await setScroll(page, 9999);
@@ -251,7 +251,7 @@ async function main() {
 
     await page.goto(`${BASE}/staff/reviews/petitions`, { waitUntil: "domcontentloaded" });
     await see(page, "Later library hours");
-    await see(page, "25 signatures");
+    await see(page, "87 signatures");
     pass("osa petition count");
 
     await page.goto(`${BASE}/staff/announce`, { waitUntil: "domcontentloaded" });

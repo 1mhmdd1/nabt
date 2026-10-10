@@ -120,14 +120,17 @@ function ImpactBlock() {
   if (!impact) return null;
   const tiles: { n: string; label: string; white?: boolean }[] = [
     { n: privacyCount(impact.events), label: "Events" },
-    { n: privacyCount(impact.checkIns), label: "Check-ins" },
+    { n: privacyCount(impact.checkIns), label: "Event check-ins" },
     { n: privacyCount(impact.uniqueStudents), label: "Students reached", white: true },
-    { n: privacyCount(impact.activeCircles), label: "Circles" },
-    { n: privacyCount(impact.verifiedCommunities), label: "Verified" },
+    { n: String(impact.activeCircles), label: "Circles" },
+    { n: String(impact.verifiedCommunities), label: "Verified" },
     { n: privacyCount(impact.newMembers), label: "New members" },
   ];
   if (typeof impact.avgRating === "number") tiles.push({ n: String(impact.avgRating), label: "Avg rating" });
   if (typeof impact.certificatesIssued === "number") tiles.push({ n: privacyCount(impact.certificatesIssued), label: "Certificates" });
+  if (typeof impact.moodCheckIns === "number") tiles.push({ n: privacyCount(impact.moodCheckIns), label: "Mood check-ins" });
+  if (typeof impact.supportHandled === "number") tiles.push({ n: privacyCount(impact.supportHandled), label: "Support handled" });
+  if (impact.medianFirstReply) tiles.push({ n: impact.medianFirstReply, label: "Median first reply" });
   const maxTop = Math.max(1, ...impact.top.map((row) => row.score));
   return (
     <View>
@@ -145,7 +148,7 @@ function ImpactBlock() {
       </View>
       {impact.weeks.length > 0 ? (
         <View style={[styles.chartCard, { marginTop: 8 }]}>
-          <Text style={[styles.fl, { marginBottom: 6 }]}>Wellbeing · anonymous</Text>
+          <Text style={[styles.fl, { marginBottom: 6 }]}>Mood check-ins per week · anonymous</Text>
           <WeekChart weeks={impact.weeks} />
         </View>
       ) : null}
@@ -173,23 +176,23 @@ function WeekChart({ weeks }: { weeks: WeekPoint[] }) {
   const max = Math.max(1, ...weeks.map((week) => week.score));
   const gap = 330 / Math.max(weeks.length, 1);
   return (
-    <Svg viewBox="0 0 330 100" width="100%" height={108} accessibilityLabel="Anonymous wellbeing by week. Exam weeks are marked.">
+    <Svg viewBox="0 0 330 100" width="100%" height={108} accessibilityLabel="Anonymous mood check-ins by week. Exam weeks are marked.">
       {weeks.map((week, index) => {
         const h = Math.max(4, (week.score / max) * 58);
-        const x = index * gap + 16;
+        const x = index * gap + (gap - 26) / 2;
         return (
           <Rect key={week.label} x={x} y={68 - h} width={26} height={h} rx={3} fill="#fff" fillOpacity={week.exam ? 1 : 0.45} />
         );
       })}
       {weeks.map((week, index) => (
-        <SvgText key={`${week.label}-l`} x={index * gap + 29} y={84} textAnchor="middle" fill="rgba(255,255,255,0.64)" fontSize={10} fontWeight="600">
+        <SvgText key={`${week.label}-l`} x={index * gap + gap / 2} y={84} textAnchor="middle" fill="rgba(255,255,255,0.64)" fontSize={10} fontWeight="600">
           {week.label}
         </SvgText>
       ))}
       {weeks.filter((week) => week.exam).map((week) => {
         const index = weeks.indexOf(week);
         return (
-          <SvgText key={`${week.label}-e`} x={index * gap + 29} y={96} textAnchor="middle" fill="rgba(255,255,255,0.80)" fontSize={9} fontWeight="600">
+          <SvgText key={`${week.label}-e`} x={index * gap + gap / 2} y={96} textAnchor="middle" fill="rgba(255,255,255,0.80)" fontSize={9} fontWeight="600">
             Exam
           </SvgText>
         );

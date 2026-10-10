@@ -263,9 +263,9 @@ export function Header({
         <IconBack />
       </Pressable>
       <View style={{ flex: 1 }}>
-        <Text style={t(600, 18, 22)}>{title}</Text>
+        <Text style={t(600, 18, 22)} numberOfLines={1}>{title}</Text>
         <View style={styles.subRow}>
-          <Text style={styles.sub}>{sub}</Text>
+          <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
           {here ? <View style={styles.hereDot} /> : null}
           {here ? <Text style={styles.sub}>{here}</Text> : null}
         </View>
